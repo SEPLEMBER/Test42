@@ -1,6 +1,6 @@
 plugins {
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.android-application)
+    alias(libs.plugins.kotlin-android)
 }
 
 android {
@@ -24,6 +24,9 @@ android {
                 "proguard-rules.pro"
             )
         }
+        debug {
+            // debug настройки при необходимости
+        }
     }
 
     buildFeatures {
@@ -46,13 +49,28 @@ android {
 }
 
 dependencies {
+    // Core
     implementation(libs.core.ktx)
     implementation(libs.appcompat)
     implementation(libs.documentfile)
 
+    // Coroutines
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)
 
+    // EditorKit — основной выбор (легковесный, модульный, Apache-2.0)
+    implementation(libs.editorkit)
+    // Подключаем языковые модули по потребности — сейчас Rust и Kotlin как пример
+    implementation(libs.editorkit.language.rust)
+    implementation(libs.editorkit.language.kotlin)
+
+    // Опционально: prism4j если будешь делать частично свой лексер/парсер
+    implementation(libs.prism4j.bundler)
+
+    // Опционально: лёгкий viewer
+    implementation(libs.codeview)
+
+    // Tests
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
