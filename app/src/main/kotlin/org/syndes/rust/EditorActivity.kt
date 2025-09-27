@@ -8,12 +8,16 @@ import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.view.LayoutInflater
+import android.view.MotionEvent
+import android.view.View
 import android.widget.EditText
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.isVisible
+import androidx.core.view.doOnNextLayout
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -28,16 +32,17 @@ class EditorActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityEditorBinding
 
-    // Текущая URI открытого файла (если есть)
-    private var currentDocumentUri: Uri? = null
-
-    // SAF лончеры
+    // SAF launchers
     private lateinit var openDocumentLauncher: ActivityResultLauncher<Array<String>>
     private lateinit var createDocumentLauncher: ActivityResultLauncher<String>
 
-    // Переменные для поиска
+    // current doc uri
+    private var currentDocumentUri: Uri? = null
+
+    // Find/Replace state
     private var lastQuery: String? = null
-    private var lastMatchIndex: Int = -1
+    private var matches: List<IntRange> = emptyList()
+    private var currentMatchIdx: Int = -1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,44 +52,44 @@ class EditorActivity : AppCompatActivity() {
         setSupportActionBar(binding.toolbar)
         supportActionBar?.title = getString(R.string.app_name)
 
-        // Регистрируем SAF лончеры
+        // SAF
         openDocumentLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             uri?.let { readDocumentUri(it) }
         }
-
-        createDocumentLauncher =
-            registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
-                uri?.let { uriCreated ->
-                    // После создания документа — сохраняем в него текст
-                    currentDocumentUri = uriCreated
-                    writeToUri(uriCreated, binding.editor.text.toString())
-                }
+        createDocumentLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
+            uri?.let {
+                currentDocumentUri = it
+                writeToUri(it, binding.editor.text.toString())
             }
+        }
 
-        // Меню в Toolbar обрабатываем через onOptionsItemSelected
+        // menu clicks
         binding.toolbar.setOnMenuItemClickListener { item ->
             onOptionsItemSelected(item)
         }
 
-        // Если нужно — показываем подсказку
-        binding.emptyHint.isVisible = binding.editor.text.isNullOrEmpty()
+        // initial hint visibility, word/char count
+        binding.emptyHint.visibility = if (binding.editor.text.isNullOrEmpty()) View.VISIBLE else View.GONE
+        updateStats()
 
-        // Поддержим обновление подсказки при изменении текста
+        // text watcher: update hint and stats and clear matches on change
         binding.editor.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
-                // no-op
-            }
-
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                // no-op
-            }
-
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
-                binding.emptyHint.isVisible = s.isNullOrEmpty()
+                binding.emptyHint.visibility = if (s.isNullOrEmpty()) View.VISIBLE else View.GONE
+                updateStats()
+                // Invalidate previous matches (we'll recompute when user searches again)
+                matches = emptyList()
+                currentMatchIdx = -1
             }
         })
+
+        // Scroll thumb: touch to jump scroll
+        setupScrollThumb()
     }
 
+    // ---------- MENU ACTIONS ----------
     override fun onCreateOptionsMenu(menu: android.view.Menu?): Boolean {
         menuInflater.inflate(R.menu.menu_editor, menu)
         return true
@@ -93,51 +98,46 @@ class EditorActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_open -> {
-                // Открыть документ (text/*)
                 openDocumentLauncher.launch(arrayOf("text/*"))
                 true
             }
             R.id.action_save -> {
-                // Сохраняем: если есть текущая URI — перезаписываем, иначе — CreateDocument
                 val uri = currentDocumentUri
                 if (uri != null) {
                     writeToUri(uri, binding.editor.text.toString())
                 } else {
-                    // Предложим имя по умолчанию
                     createDocumentLauncher.launch("untitled.txt")
                 }
                 true
             }
             R.id.action_find -> {
-                showFindDialog()
+                showFindReplaceDialog()
                 true
             }
             R.id.action_copy -> {
-                // Заглушка: копировать — пока заглушка
                 val selStart = binding.editor.selectionStart
                 val selEnd = binding.editor.selectionEnd
                 if (selStart >= 0 && selEnd > selStart) {
                     val sel = binding.editor.text?.substring(selStart, selEnd)
                     if (!sel.isNullOrEmpty()) {
                         copyToClipboard(sel)
-                        Toast.makeText(this, "Copy (placeholder): copied selection to clipboard", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, "Copied selection to clipboard", Toast.LENGTH_SHORT).show()
                     } else {
-                        Toast.makeText(this, "Copy (placeholder): nothing selected", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, "Nothing selected", Toast.LENGTH_SHORT).show()
                     }
                 } else {
-                    Toast.makeText(this, "Copy (placeholder): nothing selected", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Nothing selected", Toast.LENGTH_SHORT).show()
                 }
                 true
             }
             R.id.action_paste -> {
-                // Заглушка: вставить — пока заглушка, вставляет из системного буфера (если есть)
                 val pasted = pasteFromClipboard()
-                if (pasted != null) {
-                    val start = binding.editor.selectionStart.coerceAtLeast(0)
-                    binding.editor.text?.insert(start, pasted)
-                    Toast.makeText(this, "Paste (placeholder): pasted from clipboard", Toast.LENGTH_SHORT).show()
+                if (!pasted.isNullOrEmpty()) {
+                    val pos = binding.editor.selectionStart.coerceAtLeast(0)
+                    binding.editor.text?.insert(pos, pasted)
+                    Toast.makeText(this, "Pasted from clipboard", Toast.LENGTH_SHORT).show()
                 } else {
-                    Toast.makeText(this, "Paste (placeholder): clipboard empty", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Clipboard empty", Toast.LENGTH_SHORT).show()
                 }
                 true
             }
@@ -145,18 +145,16 @@ class EditorActivity : AppCompatActivity() {
         }
     }
 
-    // Чтение документа из SAF URI в background
+    // ---------- FILE IO ----------
     private fun readDocumentUri(uri: Uri) {
         lifecycleScope.launch {
             try {
-                // Попытка взять persistable permission (если доступен)
+                // try to persist permission if available (best-effort)
                 try {
                     val takeFlags = (intent?.flags ?: 0) and
                         (android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                     contentResolver.takePersistableUriPermission(uri, takeFlags)
-                } catch (ignored: Exception) {
-                    // не критично
-                }
+                } catch (ignored: Exception) {}
 
                 val content = withContext(Dispatchers.IO) {
                     contentResolver.openInputStream(uri)?.use { inputStream ->
@@ -165,7 +163,6 @@ class EditorActivity : AppCompatActivity() {
                             var line: String? = br.readLine()
                             while (line != null) {
                                 sb.append(line)
-                                // сохраняем переносы строк
                                 line = br.readLine()
                                 if (line != null) sb.append("\n")
                             }
@@ -175,6 +172,7 @@ class EditorActivity : AppCompatActivity() {
                 }
 
                 currentDocumentUri = uri
+                // set text on main thread
                 binding.editor.setText(content)
                 binding.editor.setSelection(0)
                 Toast.makeText(this@EditorActivity, "File opened", Toast.LENGTH_SHORT).show()
@@ -185,12 +183,10 @@ class EditorActivity : AppCompatActivity() {
         }
     }
 
-    // Запись в URI (перезапись) в background
     private fun writeToUri(uri: Uri, text: String) {
         lifecycleScope.launch {
             try {
                 withContext(Dispatchers.IO) {
-                    // Открываем поток и перезаписываем содержимое
                     contentResolver.openOutputStream(uri, "wt")?.use { outputStream ->
                         BufferedWriter(OutputStreamWriter(outputStream, Charsets.UTF_8)).use { bw ->
                             bw.write(text)
@@ -206,130 +202,193 @@ class EditorActivity : AppCompatActivity() {
         }
     }
 
-    // Показать диалог поиска (регистронезависимо, корректно работает со спецсимволами)
-    private fun showFindDialog() {
-        val input = EditText(this)
-        input.hint = "Find"
+    // ---------- FIND & REPLACE ----------
+    private fun showFindReplaceDialog() {
+        val inflater = LayoutInflater.from(this)
+        val view = inflater.inflate(R.layout.dialog_find_replace, null)
+        val etFind = view.findViewById<EditText>(R.id.etFind)
+        val etReplace = view.findViewById<EditText>(R.id.etReplace)
+        val tvCount = view.findViewById<TextView>(R.id.tvMatchesCount)
+        val btnPrev = view.findViewById<View>(R.id.btnPrev)
+        val btnNext = view.findViewById<View>(R.id.btnNext)
+        val btnR1 = view.findViewById<View>(R.id.btnReplaceOne)
+        val btnRAll = view.findViewById<View>(R.id.btnReplaceAll)
 
-        val alert = AlertDialog.Builder(this)
-            .setTitle("Find")
-            .setView(input)
-            .setPositiveButton("Find Next") { _, _ ->
-                val query = input.text.toString()
-                if (query.isNotEmpty()) {
-                    performFind(query)
-                } else {
-                    Toast.makeText(this, "Empty query", Toast.LENGTH_SHORT).show()
-                }
-            }
-            .setNeutralButton("Find Previous") { _, _ ->
-                val query = input.text.toString()
-                if (query.isNotEmpty()) {
-                    performFindPrevious(query)
-                } else {
-                    Toast.makeText(this, "Empty query", Toast.LENGTH_SHORT).show()
-                }
-            }
+        // prefill with last query
+        if (!lastQuery.isNullOrEmpty()) etFind.setText(lastQuery)
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Find / Replace")
+            .setView(view)
             .setNegativeButton("Close", null)
             .create()
 
-        // Если есть предыдущий запрос — вставим в поле
-        if (!lastQuery.isNullOrEmpty()) input.setText(lastQuery)
-
-        alert.show()
-    }
-
-    // Находит следующий матч для lastQuery или нового query
-    private fun performFind(query: String) {
-        val fullText = binding.editor.text?.toString() ?: ""
-        if (fullText.isEmpty()) {
-            Toast.makeText(this, "Document empty", Toast.LENGTH_SHORT).show()
-            return
+        // recompute matches when user types query (off main thread)
+        fun computeMatchesAndUpdate(query: String) {
+            lifecycleScope.launch(Dispatchers.Default) {
+                val text = binding.editor.text?.toString() ?: ""
+                if (query.isEmpty()) {
+                    matches = emptyList()
+                    currentMatchIdx = -1
+                } else {
+                    val escaped = Regex.escape(query)
+                    val regex = Regex(escaped, RegexOption.IGNORE_CASE)
+                    val found = regex.findAll(text).map { it.range.first..it.range.last }.toList()
+                    matches = found
+                    currentMatchIdx = if (found.isNotEmpty()) 0 else -1
+                }
+                withContext(Dispatchers.Main) {
+                    tvCount.text = "${matches.size} matches"
+                    if (currentMatchIdx >= 0 && matches.isNotEmpty()) {
+                        selectMatchAt(currentMatchIdx)
+                    }
+                }
+            }
         }
 
-        // Экранируем спецсимволы, используем регистронезависимый поиск
-        val escaped = Regex.escape(query)
-        val regex = Regex(escaped, RegexOption.IGNORE_CASE)
+        // select given match index on main thread and reveal it
+        fun selectMatchAt(index: Int) {
+            if (index < 0 || index >= matches.size) return
+            val range = matches[index]
+            binding.editor.requestFocus()
+            val safeStart = range.first.coerceIn(0, binding.editor.text?.length ?: 0)
+            val safeEnd = (range.last + 1).coerceIn(0, binding.editor.text?.length ?: 0)
+            binding.editor.setSelection(safeStart, safeEnd)
+            revealSelection(safeStart)
+            lastQuery = etFind.text.toString()
+        }
 
-        val startSearchFrom = if (lastQuery == query && lastMatchIndex >= 0) lastMatchIndex + 1 else 0
+        // next / prev handlers
+        btnNext.setOnClickListener {
+            if (matches.isEmpty()) {
+                Toast.makeText(this, "No matches", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            currentMatchIdx = (currentMatchIdx + 1) % matches.size
+            selectMatchAt(currentMatchIdx)
+        }
+        btnPrev.setOnClickListener {
+            if (matches.isEmpty()) {
+                Toast.makeText(this, "No matches", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            currentMatchIdx = if (currentMatchIdx - 1 < 0) matches.size - 1 else currentMatchIdx - 1
+            selectMatchAt(currentMatchIdx)
+        }
 
-        val match = regex.find(fullText, startSearchFrom)
-        if (match != null) {
-            val s = match.range.first
-            val e = match.range.last + 1
-            selectAndReveal(s, e)
-            lastQuery = query
-            lastMatchIndex = s
-            Toast.makeText(this, "Found at $s", Toast.LENGTH_SHORT).show()
-        } else {
-            // если не найдено от текущей позиции, попробуем сначала от начала
-            val wrapMatch = regex.find(fullText, 0)
-            if (wrapMatch != null) {
-                val s = wrapMatch.range.first
-                val e = wrapMatch.range.last + 1
-                selectAndReveal(s, e)
-                lastQuery = query
-                lastMatchIndex = s
-                Toast.makeText(this, "Found (wrapped) at $s", Toast.LENGTH_SHORT).show()
+        // Replace one (R1)
+        btnR1.setOnClickListener {
+            val q = etFind.text.toString()
+            val r = etReplace.text.toString()
+            if (q.isEmpty()) {
+                Toast.makeText(this, "Query empty", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            if (matches.isEmpty() || currentMatchIdx < 0) {
+                Toast.makeText(this, "No current match to replace", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            val range = matches[currentMatchIdx]
+            val editable = binding.editor.text ?: return@setOnClickListener
+            // perform replacement on main thread (small op)
+            editable.replace(range.first, range.last + 1, r)
+            // recompute matches (do on background)
+            computeMatchesAndUpdate(q)
+        }
+
+        // Replace All (RALL)
+        btnRAll.setOnClickListener {
+            val q = etFind.text.toString()
+            val r = etReplace.text.toString()
+            if (q.isEmpty()) {
+                Toast.makeText(this, "Query empty", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            lifecycleScope.launch(Dispatchers.Default) {
+                val full = binding.editor.text?.toString() ?: ""
+                val escaped = Regex.escape(q)
+                val regex = Regex(escaped, RegexOption.IGNORE_CASE)
+                val replaced = regex.replace(full, r)
+                withContext(Dispatchers.Main) {
+                    binding.editor.setText(replaced)
+                    // move cursor to start
+                    binding.editor.setSelection(0)
+                    matches = emptyList()
+                    currentMatchIdx = -1
+                    tvCount.text = "0 matches"
+                    updateStats()
+                    Toast.makeText(this@EditorActivity, "Replaced all", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+        // recompute when query changes (with debounce-like behavior: immediate recompute is fine)
+        etFind.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                val q = s?.toString() ?: ""
+                computeMatchesAndUpdate(q)
+            }
+        })
+
+        dialog.show()
+        // initial compute
+        val initialQuery = etFind.text.toString()
+        if (initialQuery.isNotEmpty()) computeMatchesAndUpdate(initialQuery)
+    }
+
+    // reveal selection by scrolling editor so the selection line is visible
+    private fun revealSelection(selectionStart: Int) {
+        binding.editor.post {
+            val layout = binding.editor.layout ?: return@post
+            val line = layout.getLineForOffset(selectionStart)
+            val y = layout.getLineTop(line)
+            // smooth scroll to approximate position
+            binding.editor.scrollTo(0, y)
+        }
+    }
+
+    // ---------- SCROLL THUMB ----------
+    private fun setupScrollThumb() {
+        // map touch y to editor scroll
+        binding.scrollThumb.setOnTouchListener { v, event ->
+            if (event.action == MotionEvent.ACTION_DOWN || event.action == MotionEvent.ACTION_MOVE) {
+                val h = v.height.toFloat()
+                val y = event.y.coerceIn(0f, h)
+                binding.editor.doOnNextLayout {
+                    val layout = binding.editor.layout
+                    if (layout != null) {
+                        val contentHeight = layout.height
+                        val viewHeight = binding.editor.height
+                        val maxScroll = (contentHeight - viewHeight).coerceAtLeast(0)
+                        val proportion = (y / h).coerceIn(0f, 1f)
+                        val scrollY = (proportion * maxScroll).toInt()
+                        binding.editor.scrollTo(0, scrollY)
+                    }
+                }
+                true
             } else {
-                Toast.makeText(this, "Not found", Toast.LENGTH_SHORT).show()
+                // allow click pass-through on up/cancel
+                true
             }
         }
     }
 
-    private fun performFindPrevious(query: String) {
-        val fullText = binding.editor.text?.toString() ?: ""
-        if (fullText.isEmpty()) {
-            Toast.makeText(this, "Document empty", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val escaped = Regex.escape(query)
-        val regex = Regex(escaped, RegexOption.IGNORE_CASE)
-
-        // Ищем с позиции перед lastMatchIndex
-        val searchEnd = if (lastQuery == query && lastMatchIndex > 0) lastMatchIndex - 1 else fullText.length
-        // Перебираем все вхождения до позиции
-        val allMatches = regex.findAll(fullText, 0).toList()
-        val prev = allMatches.lastOrNull { it.range.first < searchEnd }
-        if (prev != null) {
-            val s = prev.range.first
-            val e = prev.range.last + 1
-            selectAndReveal(s, e)
-            lastQuery = query
-            lastMatchIndex = s
-            Toast.makeText(this, "Found at $s", Toast.LENGTH_SHORT).show()
-        } else {
-            // пробуем найти с конца (wrap)
-            val last = allMatches.lastOrNull()
-            if (last != null) {
-                val s = last.range.first
-                val e = last.range.last + 1
-                selectAndReveal(s, e)
-                lastQuery = query
-                lastMatchIndex = s
-                Toast.makeText(this, "Found (wrapped) at $s", Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(this, "Not found", Toast.LENGTH_SHORT).show()
-            }
-        }
+    // ---------- UTILS ----------
+    private fun updateStats() {
+        val text = binding.editor.text?.toString() ?: ""
+        val chars = text.length
+        val words = if (text.isBlank()) 0 else text.trim().split(Regex("\\s+")).size
+        binding.tvStats.text = "Words: $words | Chars: $chars"
     }
 
-    private fun selectAndReveal(start: Int, end: Int) {
-        binding.editor.requestFocus()
-        val safeStart = start.coerceIn(0, binding.editor.text?.length ?: 0)
-        val safeEnd = end.coerceIn(0, binding.editor.text?.length ?: 0)
-        binding.editor.setSelection(safeStart, safeEnd)
-    }
-
-    // Копирование в системный буфер (в качестве заглушки/полезной реализации)
     private fun copyToClipboard(text: String) {
         val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val clip = ClipData.newPlainText("text", text)
         clipboard.setPrimaryClip(clip)
     }
 
-    // Вставка из системного буфера (в качестве заглушки)
     private fun pasteFromClipboard(): String? {
         val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val primary = clipboard.primaryClip
