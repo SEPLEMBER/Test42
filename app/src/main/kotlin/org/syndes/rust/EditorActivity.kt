@@ -223,6 +223,18 @@ class EditorActivity : AppCompatActivity() {
             .setNegativeButton("Close", null)
             .create()
 
+        // select given match index on main thread and reveal it
+        fun selectMatchAt(index: Int) {
+            if (index < 0 || index >= matches.size) return
+            val range = matches[index]
+            binding.editor.requestFocus()
+            val safeStart = range.first.coerceIn(0, binding.editor.text?.length ?: 0)
+            val safeEnd = (range.last + 1).coerceIn(0, binding.editor.text?.length ?: 0)
+            binding.editor.setSelection(safeStart, safeEnd)
+            revealSelection(safeStart)
+            lastQuery = etFind.text.toString()
+        }
+
         // recompute matches when user types query (off main thread)
         fun computeMatchesAndUpdate(query: String) {
             lifecycleScope.launch(Dispatchers.Default) {
@@ -244,18 +256,6 @@ class EditorActivity : AppCompatActivity() {
                     }
                 }
             }
-        }
-
-        // select given match index on main thread and reveal it
-        fun selectMatchAt(index: Int) {
-            if (index < 0 || index >= matches.size) return
-            val range = matches[index]
-            binding.editor.requestFocus()
-            val safeStart = range.first.coerceIn(0, binding.editor.text?.length ?: 0)
-            val safeEnd = (range.last + 1).coerceIn(0, binding.editor.text?.length ?: 0)
-            binding.editor.setSelection(safeStart, safeEnd)
-            revealSelection(safeStart)
-            lastQuery = etFind.text.toString()
         }
 
         // next / prev handlers
