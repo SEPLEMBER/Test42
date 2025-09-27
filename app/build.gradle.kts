@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "org.syndes.terminal"
+    namespace = "org.syndes.rust"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "org.syndes.terminal"
+        applicationId = "org.syndes.rust"
         minSdk = 26
         targetSdk = 34
         versionCode = 2
