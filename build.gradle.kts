@@ -1,4 +1,5 @@
-// root build.gradle.kts — пустой/минимальный
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
 plugins {
-    // Можно добавить плагины для всей сборки, если нужно (обычно не требуется)
+    alias(libs.plugins.android.application) apply false
+    alias(libs.plugins.kotlin.android) apply false
 }
