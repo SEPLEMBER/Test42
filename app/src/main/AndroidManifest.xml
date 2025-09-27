@@ -25,6 +25,12 @@
             </intent-filter>
         </activity>
 
+        <!-- Экран редактора (EditorActivity) -->
+        <activity
+            android:name=".EditorActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme" />
+
     </application>
 
 </manifest>
