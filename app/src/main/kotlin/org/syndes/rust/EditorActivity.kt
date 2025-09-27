@@ -173,7 +173,7 @@ class EditorActivity : AppCompatActivity() {
 
                 currentDocumentUri = uri
                 // set text on main thread
-                binding.editor.setText(content)
+                binding.editor.setText(content, TextView.BufferType.EDITABLE)
                 binding.editor.setSelection(0)
                 Toast.makeText(this@EditorActivity, "File opened", Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
@@ -219,7 +219,7 @@ class EditorActivity : AppCompatActivity() {
 
         val dialog = AlertDialog.Builder(this)
             .setTitle("Find / Replace")
-            .setView(view)
+            .setView(view) // explicitly pass View
             .setNegativeButton("Close", null)
             .create()
 
@@ -308,9 +308,10 @@ class EditorActivity : AppCompatActivity() {
                 val full = binding.editor.text?.toString() ?: ""
                 val escaped = Regex.escape(q)
                 val regex = Regex(escaped, RegexOption.IGNORE_CASE)
-                val replaced = regex.replace(full, r)
+                // explicitly name parameters to avoid overload ambiguity
+                val replaced = regex.replace(input = full, replacement = r)
                 withContext(Dispatchers.Main) {
-                    binding.editor.setText(replaced)
+                    binding.editor.setText(replaced, TextView.BufferType.EDITABLE)
                     // move cursor to start
                     binding.editor.setSelection(0)
                     matches = emptyList()
@@ -322,7 +323,7 @@ class EditorActivity : AppCompatActivity() {
             }
         }
 
-        // recompute when query changes (with debounce-like behavior: immediate recompute is fine)
+        // recompute when query changes
         etFind.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -355,7 +356,7 @@ class EditorActivity : AppCompatActivity() {
         binding.scrollThumb.setOnTouchListener { v, event ->
             if (event.action == MotionEvent.ACTION_DOWN || event.action == MotionEvent.ACTION_MOVE) {
                 val h = v.height.toFloat()
-                val y = event.y.coerceIn(0f, h)
+                val y = event.y.coerceAtMost(h).coerceAtLeast(0f)
                 binding.editor.doOnNextLayout {
                     val layout = binding.editor.layout
                     if (layout != null) {
@@ -369,7 +370,7 @@ class EditorActivity : AppCompatActivity() {
                 }
                 true
             } else {
-                // allow click pass-through on up/cancel
+                // consume event
                 true
             }
         }
