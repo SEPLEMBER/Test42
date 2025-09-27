@@ -1,6 +1,15 @@
 <resources>
-    <string name="app_name">Syndes Terminal</string>
-    <string name="hint_command">Enter command</string>
-    <string name="btn_run">Run</string>
-    <string name="close">Close</string>
+    <!-- Название приложения -->
+    <string name="app_name">Rust</string>
+
+    <!-- Меню File -->
+    <string name="menu_file">File</string>
+    <string name="menu_open">Open</string>
+    <string name="menu_save">Save</string>
+
+    <!-- Меню Edit -->
+    <string name="menu_edit">Edit</string>
+    <string name="menu_copy">Copy</string>
+    <string name="menu_paste">Paste</string>
+    <string name="menu_find">Find</string>
 </resources>
