@@ -6,6 +6,8 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.net.Uri
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
@@ -13,10 +15,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
-import org.syndes.rust.databinding.ActivityEditorBinding
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.syndes.rust.databinding.ActivityEditorBinding
 import java.io.BufferedReader
 import java.io.BufferedWriter
 import java.io.InputStreamReader
@@ -50,13 +52,14 @@ class EditorActivity : AppCompatActivity() {
             uri?.let { readDocumentUri(it) }
         }
 
-        createDocumentLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
-            uri?.let { uriCreated ->
-                // После создания документа — сохраняем в него текст
-                currentDocumentUri = uriCreated
-                writeToUri(uriCreated, binding.editor.text.toString())
+        createDocumentLauncher =
+            registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
+                uri?.let { uriCreated ->
+                    // После создания документа — сохраняем в него текст
+                    currentDocumentUri = uriCreated
+                    writeToUri(uriCreated, binding.editor.text.toString())
+                }
             }
-        }
 
         // Меню в Toolbar обрабатываем через onOptionsItemSelected
         binding.toolbar.setOnMenuItemClickListener { item ->
@@ -67,9 +70,19 @@ class EditorActivity : AppCompatActivity() {
         binding.emptyHint.isVisible = binding.editor.text.isNullOrEmpty()
 
         // Поддержим обновление подсказки при изменении текста
-        binding.editor.addTextChangedListener {
-            binding.emptyHint.isVisible = it.isNullOrEmpty()
-        }
+        binding.editor.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
+                // no-op
+            }
+
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                // no-op
+            }
+
+            override fun afterTextChanged(s: Editable?) {
+                binding.emptyHint.isVisible = s.isNullOrEmpty()
+            }
+        })
     }
 
     override fun onCreateOptionsMenu(menu: android.view.Menu?): Boolean {
@@ -101,11 +114,16 @@ class EditorActivity : AppCompatActivity() {
             }
             R.id.action_copy -> {
                 // Заглушка: копировать — пока заглушка
-                // Для примера: кладём в буфер выделенный текст (можно оставить как заглушку)
-                val sel = binding.editor.text?.substring(binding.editor.selectionStart, binding.editor.selectionEnd)
-                if (!sel.isNullOrEmpty()) {
-                    copyToClipboard(sel)
-                    Toast.makeText(this, "Copy (placeholder): copied selection to clipboard", Toast.LENGTH_SHORT).show()
+                val selStart = binding.editor.selectionStart
+                val selEnd = binding.editor.selectionEnd
+                if (selStart >= 0 && selEnd > selStart) {
+                    val sel = binding.editor.text?.substring(selStart, selEnd)
+                    if (!sel.isNullOrEmpty()) {
+                        copyToClipboard(sel)
+                        Toast.makeText(this, "Copy (placeholder): copied selection to clipboard", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this, "Copy (placeholder): nothing selected", Toast.LENGTH_SHORT).show()
+                    }
                 } else {
                     Toast.makeText(this, "Copy (placeholder): nothing selected", Toast.LENGTH_SHORT).show()
                 }
@@ -172,6 +190,7 @@ class EditorActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 withContext(Dispatchers.IO) {
+                    // Открываем поток и перезаписываем содержимое
                     contentResolver.openOutputStream(uri, "wt")?.use { outputStream ->
                         BufferedWriter(OutputStreamWriter(outputStream, Charsets.UTF_8)).use { bw ->
                             bw.write(text)
