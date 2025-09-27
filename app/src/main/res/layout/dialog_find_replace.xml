@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/dialog_find_replace"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <EditText
+        android:id="@+id/etFind"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Find"
+        android:inputType="text" />
+
+    <EditText
+        android:id="@+id/etReplace"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Replace with"
+        android:inputType="text" />
+
+    <TextView
+        android:id="@+id/tvMatchesCount"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Matches: 0"
+        android:paddingTop="8dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:paddingTop="8dp">
+
+        <Button
+            android:id="@+id/btnPrev"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="<" />
+
+        <Button
+            android:id="@+id/btnNext"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=">" />
+
+        <Button
+            android:id="@+id/btnReplaceOne"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="R1" />
+
+        <Button
+            android:id="@+id/btnReplaceAll"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="RALL" />
+    </LinearLayout>
+</LinearLayout>
