@@ -1,3 +1,4 @@
+# gradle/libs.versions.toml
 [versions]
 agp = "8.4.0"
 junit = "4.13.2"
@@ -9,16 +10,37 @@ coreKtx = "1.13.1"
 documentfile = "1.0.1"
 coroutines = "1.7.3"
 
-[libraries]
-junit = { group = "junit", name = "junit", version.ref = "junit" }
-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
-documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+# Дополнительные версии для подсветки/редакторов
+editorkit = "2.9.0"         # EditorKit (Apache-2.0) — лёгкий, модульный
+prism4j_bundler = "1.1.0"   # Prism4j bundler (лексер/грамматики) — минимальная зависимость
+codeview = "1.0.7"          # опциональный лёгкий viewer
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+
+[libraries]
+# тесты
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
+espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+
+# Android core
+appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
+
+# Coroutines
+coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
+coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+
+# Editor / подсветка (выбран Editorkit как основной)
+editorkit = { group = "com.blacksquircle.ui", name = "editorkit", version.ref = "editorkit" }
+editorkit-language-rust = { group = "com.blacksquircle.ui", name = "language-rust", version.ref = "editorkit" }
+editorkit-language-kotlin = { group = "com.blacksquircle.ui", name = "language-kotlin", version.ref = "editorkit" }
+
+# Лёгкий лексер/токенайзер для кастомной подсветки (опционально)
+prism4j-bundler = { group = "ru.noties", name = "prism4j-bundler", version.ref = "prism4j_bundler" }
+
+# Лёгкий source viewer (опционально)
+codeview = { group = "io.github.kbiakov", name = "CodeView-Android", version.ref = "codeview" }
