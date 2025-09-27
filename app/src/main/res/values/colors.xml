@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="terminal_bg">#DD000000</color>         <!-- полупрозрачный чёрный -->
+    <color name="terminal_panel">#000000</color>        <!-- плотный чёрный (при необходимости) -->
+    <color name="terminal_text">#FFFFFFFF</color>       <!-- белый -->
+    <color name="color_command">#8BC34A</color>         <!-- зелёный для команд -->
+    <color name="color_error">#F44336</color>           <!-- красный для ошибок -->
+    <color name="color_info">#03A9F4</color>            <!-- синий для подсказок/инфо -->
+</resources>
