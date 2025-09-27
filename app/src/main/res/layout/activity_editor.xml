@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/editor_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/editor_background">
+
+    <!-- Toolbar -->
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:popupTheme="@style/ThemeOverlay.AppCompat.Light"
+        android:background="@android:color/transparent" />
+
+    <!-- Контейнер для редактора -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="8dp">
+
+        <EditText
+            android:id="@+id/editor"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@android:color/transparent"
+            android:textColor="@color/editor_text"
+            android:textColorHint="@color/editor_text"
+            android:textSize="14sp"
+            android:inputType="textMultiLine|textNoSuggestions"
+            android:gravity="top|start"
+            android:scrollbars="vertical"
+            android:overScrollMode="ifContentScrolls"
+            android:padding="8dp"
+            android:lineSpacingExtra="2dp"
+            android:importantForAutofill="no"
+            android:hint="Start typing..." />
+
+        <!-- Небольшая подсказка, когда файл пуст -->
+        <TextView
+            android:id="@+id/emptyHint"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Empty document — use File → Open/Save"
+            android:textColor="@color/editor_text"
+            android:alpha="0.6"
+            android:layout_gravity="center"
+            android:visibility="gone"/>
+
+    </FrameLayout>
+</LinearLayout>
