@@ -65,16 +65,5 @@
             android:layout_gravity="center"
             android:visibility="gone"/>
 
-        <!-- Slim vertical scroll thumb on right side -->
-        <View
-            android:id="@+id/scrollThumb"
-            android:layout_width="24dp"
-            android:layout_height="120dp"
-            android:layout_gravity="end|center_vertical"
-            android:layout_marginEnd="4dp"
-            android:background="#424242"
-            android:alpha="0.9"
-            android:padding="4dp" />
-
     </FrameLayout>
 </LinearLayout>
