@@ -1,2 +1,2 @@
-jumi=ff0ff0
-kin=0ff0ff
+jumi=#ff0ff0
+kin=#0ff0ff
