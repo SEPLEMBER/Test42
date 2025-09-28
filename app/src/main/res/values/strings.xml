@@ -57,9 +57,6 @@
     <string name="find_hint">Find (use :123 to jump to line 123)</string>
     <string name="replace_hint">Replace with</string>
     <string name="matches_count">Matches: 0</string>
-
-    <!-- small helper text for font change -->
-    <string name="settings_font_changed">Font size changed: %1$s</string>
     
     <string name="menu_quick">Quick</string>
 <string name="menu_clear">Clear</string>
