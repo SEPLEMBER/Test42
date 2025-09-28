@@ -16,11 +16,13 @@ import android.text.TextWatcher
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.ViewTreeObserver
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
@@ -37,7 +39,6 @@ import java.io.OutputStreamWriter
 import java.util.ArrayDeque
 import kotlin.math.max
 import kotlin.math.min
-import android.widget.FrameLayout
 
 class EditorActivity : AppCompatActivity() {
 
@@ -45,8 +46,8 @@ class EditorActivity : AppCompatActivity() {
 
     // SAF launchers
     private lateinit var openDocumentLauncher: ActivityResultLauncher<Array<String>>
-    private lateinit var createDocumentLauncherSave: ActivityResultLauncher<String> // Save (create if not exists)
-    private lateinit var createDocumentLauncherSaveAs: ActivityResultLauncher<String> // Save As
+    private lateinit var createDocumentLauncherSave: ActivityResultLauncher<String>
+    private lateinit var createDocumentLauncherSaveAs: ActivityResultLauncher<String>
 
     // current doc uri
     private var currentDocumentUri: Uri? = null
@@ -112,7 +113,7 @@ class EditorActivity : AppCompatActivity() {
         setSupportActionBar(binding.toolbar)
         supportActionBar?.title = getString(R.string.app_name)
 
-        // Ensure jump zones are above other overlays and accept clicks
+        // Ensure jump zones accept clicks
         binding.jumpTop.isClickable = true
         binding.jumpTop.isFocusable = true
         binding.jumpTop.bringToFront()
@@ -134,7 +135,6 @@ class EditorActivity : AppCompatActivity() {
         }
 
         createDocumentLauncherSave = registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
-            // "Save" when no existing uri -> we get the uri here
             uri?.let { uriCreated ->
                 currentDocumentUri = uriCreated
                 writeToUri(uriCreated, binding.editor.text?.toString() ?: "")
@@ -142,7 +142,6 @@ class EditorActivity : AppCompatActivity() {
         }
 
         createDocumentLauncherSaveAs = registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
-            // Save As: always write into returned uri (don't change currentDocumentUri unless desired)
             uri?.let { uriCreated ->
                 writeToUri(uriCreated, binding.editor.text?.toString() ?: "")
             }
@@ -166,14 +165,11 @@ class EditorActivity : AppCompatActivity() {
         // text watcher: update hint, stats (debounced), and history
         binding.editor.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
-                // push previous state to undo stack on first change if enabled
                 val undoEnabled = getSharedPreferences(prefsName, Context.MODE_PRIVATE).getBoolean(PREF_UNDO_ENABLED, true)
                 if (undoEnabled) {
                     val current = binding.editor.text?.toString() ?: ""
                     if (undoStack.isEmpty() || undoStack.peekFirst() != current) {
-                        // keep a snapshot of the previous text
                         pushUndoSnapshot(current)
-                        // clear redo on new edit
                         redoStack.clear()
                     }
                 }
@@ -184,12 +180,9 @@ class EditorActivity : AppCompatActivity() {
             override fun afterTextChanged(s: Editable?) {
                 binding.emptyHint.visibility = if (s.isNullOrEmpty()) View.VISIBLE else View.GONE
                 scheduleStatsUpdate()
-                // schedule history snapshot after short idle (avoid on each keystroke)
                 scheduleHistorySnapshot()
-                // invalidate search matches
                 matches = emptyList()
                 currentMatchIdx = -1
-
                 // if gutter active -> update quickly (debounced)
                 scheduleGutterAndHighlight()
             }
@@ -197,7 +190,6 @@ class EditorActivity : AppCompatActivity() {
 
         // top-right / bottom-right invisible zones for jump-to-start/end
         binding.jumpTop.setOnClickListener {
-            // move caret and view to start
             binding.editor.requestFocus()
             binding.editor.setSelection(0)
             binding.editor.post { binding.editor.scrollTo(0, 0) }
@@ -206,7 +198,6 @@ class EditorActivity : AppCompatActivity() {
             val len = binding.editor.text?.length ?: 0
             binding.editor.requestFocus()
             binding.editor.setSelection(len)
-            // scroll to last line
             binding.editor.post {
                 val layout = binding.editor.layout
                 if (layout != null) {
@@ -221,11 +212,34 @@ class EditorActivity : AppCompatActivity() {
 
         // attach scroll observer for gutter/highlight updates
         attachScrollObserver()
+
+        // touch on right edge -> quick scroll (approximate)
+        binding.root.setOnTouchListener { v, ev ->
+            try {
+                val edgeWidthPx = dpToPx(56)
+                val x = ev.x
+                val y = ev.y
+                val w = v.width
+                if (x >= w - edgeWidthPx) {
+                    if (ev.action == MotionEvent.ACTION_DOWN || ev.action == MotionEvent.ACTION_MOVE) {
+                        val layout = binding.editor.layout ?: return@setOnTouchListener true
+                        val ratio = (y / v.height).coerceIn(0f, 1f)
+                        val targetLine = ((layout.lineCount - 1) * ratio).toInt().coerceIn(0, max(0, layout.lineCount - 1))
+                        val offset = layout.getLineStart(targetLine)
+                        binding.editor.requestFocus()
+                        binding.editor.setSelection(offset)
+                        val top = layout.getLineTop(targetLine)
+                        binding.editor.scrollTo(0, top)
+                    }
+                    return@setOnTouchListener true
+                }
+            } catch (_: Exception) { /* ignore touch errors */ }
+            false
+        }
     }
 
     override fun onResume() {
         super.onResume()
-        // re-apply prefs in case settings changed
         val sp = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
         if (sp.getBoolean(PREF_PREVENT_SCREENSHOT, false)) {
             window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
@@ -261,13 +275,11 @@ class EditorActivity : AppCompatActivity() {
                 if (uri != null) {
                     writeToUri(uri, binding.editor.text?.toString() ?: "")
                 } else {
-                    // "Save" -> CreateDocument when no current file
                     createDocumentLauncherSave.launch("untitled.txt")
                 }
                 true
             }
             R.id.action_save_as -> {
-                // Save As always asks for path/name
                 createDocumentLauncherSaveAs.launch("untitled.txt")
                 true
             }
@@ -276,16 +288,10 @@ class EditorActivity : AppCompatActivity() {
                 true
             }
             R.id.action_copy -> {
-                // copy selection or whole file if nothing selected
                 val selStart = binding.editor.selectionStart
                 val selEnd = binding.editor.selectionEnd
                 val text = binding.editor.text?.toString() ?: ""
-                val toCopy = if (selStart >= 0 && selEnd > selStart) {
-                    text.substring(selStart, selEnd)
-                } else {
-                    // copy whole doc
-                    text
-                }
+                val toCopy = if (selStart >= 0 && selEnd > selStart) text.substring(selStart, selEnd) else text
                 if (toCopy.isNotEmpty()) {
                     copyToClipboard(toCopy)
                     Toast.makeText(this, "Copied", Toast.LENGTH_SHORT).show()
@@ -305,43 +311,35 @@ class EditorActivity : AppCompatActivity() {
                 }
                 true
             }
-            R.id.action_undo -> {
-                performUndo()
-                true
-            }
-            R.id.action_redo -> {
-                performRedo()
-                true
-            }
-            R.id.action_clear -> {
-                confirmAndClear()
-                true
-            }
+            R.id.action_undo -> { performUndo(); true }
+            R.id.action_redo -> { performRedo(); true }
+            R.id.action_clear -> { confirmAndClear(); true }
             R.id.action_select_all -> {
-                binding.editor.selectAll()
+                val tlen = binding.editor.text?.length ?: 0
+                if (tlen > 0) {
+                    binding.editor.requestFocus()
+                    binding.editor.setSelection(0, tlen)
+                    // try to show selection toolbar
+                    binding.editor.post {
+                        try {
+                            binding.editor.performLongClick()
+                        } catch (_: Exception) {}
+                    }
+                }
                 true
             }
-            R.id.action_encrypt -> {
-                promptEncryptCurrent()
-                true
-            }
-            R.id.action_decrypt -> {
-                promptDecryptCurrent()
-                true
-            }
+            R.id.action_encrypt -> { promptEncryptCurrent(); true }
+            R.id.action_decrypt -> { promptDecryptCurrent(); true }
             R.id.action_settings -> {
-                // open SettingsActivity if available
                 try {
                     val intent = Intent(this, SettingsActivity::class.java)
                     startActivity(intent)
                 } catch (e: Exception) {
-                    // fallback to simple dialog
                     showSettingsFallbackDialog()
                 }
                 true
             }
             R.id.action_about -> {
-                // temporary: open settings/activity about
                 try {
                     val intent = Intent(this, SettingsActivity::class.java)
                     startActivity(intent)
@@ -359,7 +357,6 @@ class EditorActivity : AppCompatActivity() {
             .setTitle("Clear document")
             .setMessage("Are you sure you want to clear the entire document? This action can be undone (if Undo is enabled).")
             .setPositiveButton("Clear") { _, _ ->
-                // push snapshot so user can undo
                 pushUndoSnapshot(binding.editor.text?.toString() ?: "")
                 binding.editor.setText("", TextView.BufferType.EDITABLE)
                 binding.editor.setSelection(0)
@@ -375,7 +372,6 @@ class EditorActivity : AppCompatActivity() {
     private fun readDocumentUri(uri: Uri) {
         lifecycleScope.launch {
             try {
-                // try to persist permission if available (best-effort)
                 try {
                     val takeFlags = (intent?.flags ?: 0) and
                             (android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
@@ -398,10 +394,8 @@ class EditorActivity : AppCompatActivity() {
                 }
 
                 currentDocumentUri = uri
-                // set text on main thread (explicit BufferType to avoid ambiguity)
                 binding.editor.setText(content, TextView.BufferType.EDITABLE)
                 binding.editor.setSelection(0)
-                // store initial state in undo stack
                 undoStack.clear()
                 redoStack.clear()
                 pushUndoSnapshot(content)
@@ -454,7 +448,6 @@ class EditorActivity : AppCompatActivity() {
             .setNegativeButton("Close", null)
             .create()
 
-        // select match
         fun selectMatchAt(index: Int) {
             if (index < 0 || index >= matches.size) return
             val range = matches[index]
@@ -466,7 +459,6 @@ class EditorActivity : AppCompatActivity() {
             lastQuery = etFind.text.toString()
         }
 
-        // if user types :NNN go to line NNN
         fun tryGoToLine(query: String): Boolean {
             if (query.startsWith(":")) {
                 val num = query.substring(1).toIntOrNull() ?: return false
@@ -503,18 +495,12 @@ class EditorActivity : AppCompatActivity() {
         }
 
         btnNext.setOnClickListener {
-            if (matches.isEmpty()) {
-                Toast.makeText(this, "No matches", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
+            if (matches.isEmpty()) { Toast.makeText(this, "No matches", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
             currentMatchIdx = (currentMatchIdx + 1) % matches.size
             selectMatchAt(currentMatchIdx)
         }
         btnPrev.setOnClickListener {
-            if (matches.isEmpty()) {
-                Toast.makeText(this, "No matches", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
+            if (matches.isEmpty()) { Toast.makeText(this, "No matches", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
             currentMatchIdx = if (currentMatchIdx - 1 < 0) matches.size - 1 else currentMatchIdx - 1
             selectMatchAt(currentMatchIdx)
         }
@@ -522,14 +508,8 @@ class EditorActivity : AppCompatActivity() {
         btnR1.setOnClickListener {
             val q = etFind.text.toString()
             val r = etReplace.text.toString()
-            if (q.isEmpty()) {
-                Toast.makeText(this, "Query empty", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            if (matches.isEmpty() || currentMatchIdx < 0) {
-                Toast.makeText(this, "No current match to replace", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
+            if (q.isEmpty()) { Toast.makeText(this, "Query empty", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
+            if (matches.isEmpty() || currentMatchIdx < 0) { Toast.makeText(this, "No current match to replace", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
             val range = matches[currentMatchIdx]
             val editable = binding.editor.text ?: return@setOnClickListener
             editable.replace(range.first, range.last + 1, r)
@@ -539,10 +519,7 @@ class EditorActivity : AppCompatActivity() {
         btnRAll.setOnClickListener {
             val q = etFind.text.toString()
             val r = etReplace.text.toString()
-            if (q.isEmpty()) {
-                Toast.makeText(this, "Query empty", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
+            if (q.isEmpty()) { Toast.makeText(this, "Query empty", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
             lifecycleScope.launch(bgDispatcher) {
                 val full = binding.editor.text?.toString() ?: ""
                 val escaped = Regex.escape(q)
@@ -563,10 +540,7 @@ class EditorActivity : AppCompatActivity() {
         etFind.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                val q = s?.toString() ?: ""
-                computeMatchesAndUpdate(q)
-            }
+            override fun afterTextChanged(s: Editable?) { computeMatchesAndUpdate(s?.toString() ?: "") }
         })
 
         dialog.show()
@@ -584,7 +558,6 @@ class EditorActivity : AppCompatActivity() {
             binding.editor.setSelection(offset)
             val y = layout.getLineTop(targetLine)
             binding.editor.scrollTo(0, y)
-            // temporary highlight of line
             highlightLineTemporary(targetLine)
         }
     }
@@ -599,14 +572,11 @@ class EditorActivity : AppCompatActivity() {
         lifecycleScope.launch {
             delay(700)
             withContext(Dispatchers.Main) {
-                try {
-                    editable.removeSpan(span)
-                } catch (_: Exception) {}
+                try { editable.removeSpan(span) } catch (_: Exception) {}
             }
         }
     }
 
-    // reveal selection by scrolling editor so the selection line is visible
     private fun revealSelection(selectionStart: Int) {
         binding.editor.post {
             val layout = binding.editor.layout ?: return@post
@@ -636,29 +606,21 @@ class EditorActivity : AppCompatActivity() {
             for (ch in text) {
                 if (!ch.isWhitespace()) {
                     charsNoSpace++
-                    if (!inWord) {
-                        inWord = true
-                        words++
-                    }
+                    if (!inWord) { inWord = true; words++ }
                 } else {
                     if (ch == '\n') lines++
                     inWord = false
                 }
             }
-            // account last line if text not empty and does not end with newline
             if (text.isNotEmpty() && text.last() != '\n') lines++
-
             val stats = "Words: $words | Chars: $chars | NoSpace: $charsNoSpace | Lines: $lines"
             if (stats != lastStatsText) {
                 lastStatsText = stats
-                lifecycleScope.launch(Dispatchers.Main) {
-                    binding.tvStats.text = stats
-                }
+                lifecycleScope.launch(Dispatchers.Main) { binding.tvStats.text = stats }
             }
         }
     }
 
-    // backward-compatible alias
     private fun updateStatsAsync() = scheduleStatsUpdate()
 
     // ---------- FONT SIZE ----------
@@ -684,9 +646,10 @@ class EditorActivity : AppCompatActivity() {
 
         // retro mode
         if (retro) {
-            binding.editor.setTextColor(Color.parseColor("#00FF66")) // greenish retro
+            binding.editor.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
+            binding.editor.setTextColor(Color.parseColor("#00FF66"))
         } else {
-            // default color - let theme decide; use light grey fallback
+            binding.editor.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
             binding.editor.setTextColor(getColorFromAttrOrDefault(android.R.attr.textColorPrimary, Color.parseColor("#E0E0E0")))
         }
 
@@ -695,13 +658,12 @@ class EditorActivity : AppCompatActivity() {
             ensureGutter()
             gutterVisible = true
             gutter?.visibility = View.VISIBLE
-            // shift editor padding to the right of gutter
             binding.editor.post {
                 gutter?.let {
                     if (gutterWidth == 0) {
                         it.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
                         gutterWidth = it.measuredWidth
-                        val padLeft = gutterWidth + 8
+                        val padLeft = gutterWidth + dpToPx(8)
                         binding.editor.setPadding(padLeft, binding.editor.paddingTop, binding.editor.paddingRight, binding.editor.paddingBottom)
                     }
                 }
@@ -709,8 +671,7 @@ class EditorActivity : AppCompatActivity() {
         } else {
             gutterVisible = false
             gutter?.visibility = View.GONE
-            // restore padding
-            binding.editor.setPadding(8, binding.editor.paddingTop, binding.editor.paddingRight, binding.editor.paddingBottom)
+            binding.editor.setPadding(dpToPx(8), binding.editor.paddingTop, binding.editor.paddingRight, binding.editor.paddingBottom)
         }
 
         // syntax highlight: schedule update (retro disables)
@@ -728,28 +689,45 @@ class EditorActivity : AppCompatActivity() {
         }
     }
 
-private fun ensureGutter() {
-    if (gutter != null) return
-    // try to add gutter inside editor's parent FrameLayout
-    val parent = binding.editor.parent
-    if (parent is ViewGroup) {
-        val tv = TextView(this).apply {
-            setTextColor(getColorFromAttrOrDefault(android.R.attr.textColorSecondary, Color.GRAY))
-            typeface = Typeface.MONOSPACE
-            textSize = 12f
-            setPadding(6, 8, 6, 8)
-            gravity = Gravity.START or Gravity.TOP
-            setBackgroundColor(Color.TRANSPARENT)
+    private fun ensureGutter() {
+        if (gutter != null) return
+        val parent = binding.editor.parent
+        if (parent is ViewGroup) {
+            val tv = TextView(this).apply {
+                setTextColor(getColorFromAttrOrDefault(android.R.attr.textColorSecondary, Color.GRAY))
+                typeface = Typeface.MONOSPACE
+                textSize = binding.editor.textSize / resources.displayMetrics.scaledDensity // textSize returns px; convert
+                setPadding(6, 8, 6, 8)
+                gravity = Gravity.START or Gravity.TOP
+                setBackgroundColor(Color.TRANSPARENT)
+                isClickable = true
+                isFocusable = true
+            }
+            // click on gutter -> jump to clicked line
+            tv.setOnTouchListener { v, ev ->
+                try {
+                    val layout = binding.editor.layout ?: return@setOnTouchListener true
+                    val localY = ev.y + binding.editor.scrollY - (binding.editor.paddingTop)
+                    val targetLine = layout.getLineForVertical(localY.toInt()).coerceIn(0, max(0, layout.lineCount - 1))
+                    val offset = layout.getLineStart(targetLine)
+                    binding.editor.requestFocus()
+                    binding.editor.setSelection(offset)
+                    val y = layout.getLineTop(targetLine)
+                    binding.editor.scrollTo(0, y)
+                } catch (_: Exception) {}
+                true
+            }
+
+            val lp = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            lp.gravity = Gravity.START or Gravity.TOP
+            // parent is FrameLayout in our layout
+            parent.addView(tv, lp)
+            gutter = tv
         }
-        val lp = FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-            ViewGroup.LayoutParams.MATCH_PARENT
-        )
-        lp.gravity = Gravity.START or Gravity.TOP
-        parent.addView(tv, lp)
-        gutter = tv
     }
-}
 
     private fun scheduleGutterAndHighlight(delayMs: Long = 80L) {
         uiUpdateJob?.cancel()
@@ -764,10 +742,13 @@ private fun ensureGutter() {
         if (!gutterVisible) return
         val layout = binding.editor.layout ?: return
         val scrollY = binding.editor.scrollY
-        val topLine = layout.getLineForVertical(scrollY)
-        val bottomLine = layout.getLineForVertical(scrollY + binding.editor.height)
+        // account for padding top/bottom to compute visible lines more precisely
+        val topLine = layout.getLineForVertical((scrollY + binding.editor.paddingTop).coerceAtLeast(0))
+        val bottomLine = layout.getLineForVertical((scrollY + binding.editor.height - binding.editor.paddingBottom - 1).coerceAtLeast(0))
+        val clampedTop = topLine.coerceAtLeast(0)
+        val clampedBottom = bottomLine.coerceIn(0, max(0, layout.lineCount - 1))
         val sb = StringBuilder()
-        for (ln in topLine..bottomLine) {
+        for (ln in clampedTop..clampedBottom) {
             sb.append(ln + 1).append('\n')
         }
         gutter?.text = sb.toString()
@@ -776,7 +757,6 @@ private fun ensureGutter() {
     private fun attachScrollObserver() {
         if (scrollObserverAttached) return
         onScrollListener = ViewTreeObserver.OnScrollChangedListener {
-            // debounce UI update
             scheduleGutterAndHighlight()
         }
         binding.editor.viewTreeObserver.addOnScrollChangedListener(onScrollListener)
@@ -799,7 +779,6 @@ private fun ensureGutter() {
                 val current = binding.editor.text?.toString() ?: ""
                 if (undoStack.isEmpty() || undoStack.peekFirst() != current) {
                     pushUndoSnapshot(current)
-                    // on new change, clear redo
                     redoStack.clear()
                 }
             }
@@ -817,9 +796,7 @@ private fun ensureGutter() {
             return
         }
         val current = binding.editor.text?.toString() ?: ""
-        // move current to redo, pop previous from undo and set it
         redoStack.addFirst(current)
-        // pop current snapshot
         undoStack.removeFirst()
         val prev = undoStack.peekFirst() ?: ""
         binding.editor.setText(prev, TextView.BufferType.EDITABLE)
@@ -843,13 +820,11 @@ private fun ensureGutter() {
 
     // ---------- HIGHLIGHT (visible area only) ----------
     private fun updateVisibleHighlight() {
-        // cancel previous
         highlightJob?.cancel()
         val sp = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
         val syntaxOn = sp.getBoolean(PREF_SYNTAX_HIGHLIGHT, false)
         val retro = sp.getBoolean(PREF_RETRO_MODE, false)
         if (!syntaxOn || retro) {
-            // clear visible foreground spans if any
             clearForegroundSpansInRange(0, binding.editor.text?.length ?: 0)
             return
         }
@@ -863,14 +838,11 @@ private fun ensureGutter() {
             val endOffset = layout.getLineEnd(bottomLine).coerceAtMost(binding.editor.text?.length ?: 0)
 
             val visibleText = binding.editor.text?.subSequence(startOffset, endOffset)?.toString() ?: ""
-            // build list of matches for keywords
-            val spansToApply = mutableListOf<Triple<Int, Int, Int>>() // (start, end, color)
+            val spansToApply = mutableListOf<Triple<Int, Int, Int>>()
             if (visibleText.isNotEmpty()) {
-                // simple word scanning - avoid regex for perf
                 var idx = 0
                 val len = visibleText.length
                 while (idx < len) {
-                    // skip non-letter/digit/underscore
                     val c = visibleText[idx]
                     if (c.isLetter() || c == '_') {
                         val start = idx
@@ -880,18 +852,14 @@ private fun ensureGutter() {
                         if (kotlinKeywords.contains(word)) {
                             val globalStart = startOffset + start
                             val globalEnd = startOffset + idx
-                            spansToApply.add(Triple(globalStart, globalEnd, Color.parseColor("#82B1FF"))) // bluish
+                            spansToApply.add(Triple(globalStart, globalEnd, Color.parseColor("#82B1FF")))
                         }
-                    } else {
-                        idx++
-                    }
+                    } else idx++
                 }
             }
 
-            // apply spans on main thread
             withContext(Dispatchers.Main) {
                 try {
-                    // remove existing ForegroundColorSpan in range
                     clearForegroundSpansInRange(startOffset, endOffset)
                     val editable = binding.editor.text
                     if (editable is Spannable) {
@@ -909,9 +877,7 @@ private fun ensureGutter() {
         if (editable !is Spannable) return
         val spans = editable.getSpans(rangeStart, rangeEnd, ForegroundColorSpan::class.java)
         for (sp in spans) {
-            try {
-                editable.removeSpan(sp)
-            } catch (_: Exception) {}
+            try { editable.removeSpan(sp) } catch (_: Exception) {}
         }
     }
 
@@ -930,10 +896,7 @@ private fun ensureGutter() {
             val btn = dlg.getButton(AlertDialog.BUTTON_POSITIVE)
             btn.setOnClickListener {
                 val pw = input.text.toString()
-                if (pw.isEmpty()) {
-                    Toast.makeText(this, "Password required", Toast.LENGTH_SHORT).show()
-                    return@setOnClickListener
-                }
+                if (pw.isEmpty()) { Toast.makeText(this, "Password required", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
                 dlg.dismiss()
                 performEncrypt(pw.toCharArray())
             }
@@ -955,10 +918,7 @@ private fun ensureGutter() {
             val btn = dlg.getButton(AlertDialog.BUTTON_POSITIVE)
             btn.setOnClickListener {
                 val pw = input.text.toString()
-                if (pw.isEmpty()) {
-                    Toast.makeText(this, "Password required", Toast.LENGTH_SHORT).show()
-                    return@setOnClickListener
-                }
+                if (pw.isEmpty()) { Toast.makeText(this, "Password required", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
                 dlg.dismiss()
                 performDecrypt(pw.toCharArray())
             }
@@ -968,11 +928,7 @@ private fun ensureGutter() {
 
     private fun performEncrypt(password: CharArray) {
         val plain = binding.editor.text?.toString() ?: ""
-        if (plain.isEmpty()) {
-            Toast.makeText(this, "Nothing to encrypt", Toast.LENGTH_SHORT).show()
-            return
-        }
-        // Dialog with animated "please wait..."
+        if (plain.isEmpty()) { Toast.makeText(this, "Nothing to encrypt", Toast.LENGTH_SHORT).show(); return }
         val waitDlg = AlertDialog.Builder(this)
             .setTitle("Encrypting")
             .setMessage("Please wait")
@@ -983,9 +939,7 @@ private fun ensureGutter() {
         val dotsJob = lifecycleScope.launch {
             var dots = 0
             while (isActive) {
-                withContext(Dispatchers.Main) {
-                    waitDlg.setMessage("Please wait" + ".".repeat(dots))
-                }
+                withContext(Dispatchers.Main) { waitDlg.setMessage("Please wait" + ".".repeat(dots)) }
                 dots = (dots + 1) % 4
                 delay(400)
             }
@@ -1001,24 +955,17 @@ private fun ensureGutter() {
                     Toast.makeText(this@EditorActivity, "Encryption done", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(this@EditorActivity, "Encryption failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
-                }
+                withContext(Dispatchers.Main) { Toast.makeText(this@EditorActivity, "Encryption failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show() }
             } finally {
                 dotsJob.cancel()
-                withContext(Dispatchers.Main) {
-                    waitDlg.dismiss()
-                }
+                withContext(Dispatchers.Main) { waitDlg.dismiss() }
             }
         }
     }
 
     private fun performDecrypt(password: CharArray) {
         val encrypted = binding.editor.text?.toString() ?: ""
-        if (encrypted.isEmpty()) {
-            Toast.makeText(this, "Nothing to decrypt", Toast.LENGTH_SHORT).show()
-            return
-        }
+        if (encrypted.isEmpty()) { Toast.makeText(this, "Nothing to decrypt", Toast.LENGTH_SHORT).show(); return }
         val waitDlg = AlertDialog.Builder(this)
             .setTitle("Decrypting")
             .setMessage("Please wait")
@@ -1029,9 +976,7 @@ private fun ensureGutter() {
         val dotsJob = lifecycleScope.launch {
             var dots = 0
             while (isActive) {
-                withContext(Dispatchers.Main) {
-                    waitDlg.setMessage("Please wait" + ".".repeat(dots))
-                }
+                withContext(Dispatchers.Main) { waitDlg.setMessage("Please wait" + ".".repeat(dots)) }
                 dots = (dots + 1) % 4
                 delay(400)
             }
@@ -1047,14 +992,10 @@ private fun ensureGutter() {
                     Toast.makeText(this@EditorActivity, "Decryption done", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(this@EditorActivity, "Decryption failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
-                }
+                withContext(Dispatchers.Main) { Toast.makeText(this@EditorActivity, "Decryption failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show() }
             } finally {
                 dotsJob.cancel()
-                withContext(Dispatchers.Main) {
-                    waitDlg.dismiss()
-                }
+                withContext(Dispatchers.Main) { waitDlg.dismiss() }
             }
         }
     }
@@ -1093,5 +1034,11 @@ private fun ensureGutter() {
             val item = primary.getItemAt(0)
             item.coerceToText(this).toString()
         } else null
+    }
+
+    // ---------- Helpers ----------
+    private fun dpToPx(dp: Int): Int {
+        val density = resources.displayMetrics.density
+        return (dp * density).toInt()
     }
 }
