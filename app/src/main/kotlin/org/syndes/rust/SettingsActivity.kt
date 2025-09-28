@@ -21,6 +21,12 @@ class SettingsActivity : AppCompatActivity() {
     private val PREF_THEME_DARK = "theme_dark"
     private val PREF_FONT_SIZE = "font_size" // "small" | "normal" | "medium" | "large"
 
+    // new options
+    private val PREF_FORMAT_ON = "format_on"
+    private val PREF_SHOW_LINE_NUMBERS = "show_line_numbers"
+    private val PREF_RETRO_MODE = "retro_mode"
+    private val PREF_SYNTAX_HIGHLIGHT = "syntax_highlight"
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
@@ -32,32 +38,43 @@ class SettingsActivity : AppCompatActivity() {
 
         val sp = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
 
-        val swPrevent = findViewById<Switch>(R.id.swPreventScreenshots)
-        val swUndo = findViewById<Switch>(R.id.swUndoEnabled)
-        val swDark = findViewById<Switch>(R.id.swDarkTheme)
+        val swPrevent = findViewById<Switch?>(R.id.swPreventScreenshots)
+        val swUndo = findViewById<Switch?>(R.id.swUndoEnabled)
+        val swDark = findViewById<Switch?>(R.id.swDarkTheme)
 
-        val rgFont = findViewById<RadioGroup>(R.id.rgFontSize)
-        val rbSmall = findViewById<RadioButton>(R.id.rbFontSmall)
-        val rbNormal = findViewById<RadioButton>(R.id.rbFontNormal)
-        val rbMedium = findViewById<RadioButton>(R.id.rbFontMedium)
-        val rbLarge = findViewById<RadioButton>(R.id.rbFontLarge)
+        // NEW switches (optional in layout — handled null-safe)
+        val swFormat = findViewById<Switch?>(R.id.swFormatOn)
+        val swLineNums = findViewById<Switch?>(R.id.swLineNumbers)
+        val swRetro = findViewById<Switch?>(R.id.swRetroMode)
+        val swSyntax = findViewById<Switch?>(R.id.swSyntaxHighlight)
 
-        // initialize states
-        swPrevent.isChecked = sp.getBoolean(PREF_PREVENT_SCREENSHOT, false)
-        swUndo.isChecked = sp.getBoolean(PREF_UNDO_ENABLED, true)
-        swDark.isChecked = sp.getBoolean(PREF_THEME_DARK, true)
+        val rgFont = findViewById<RadioGroup?>(R.id.rgFontSize)
+        val rbSmall = findViewById<RadioButton?>(R.id.rbFontSmall)
+        val rbNormal = findViewById<RadioButton?>(R.id.rbFontNormal)
+        val rbMedium = findViewById<RadioButton?>(R.id.rbFontMedium)
+        val rbLarge = findViewById<RadioButton?>(R.id.rbFontLarge)
+
+        // initialize states (null-safe)
+        swPrevent?.isChecked = sp.getBoolean(PREF_PREVENT_SCREENSHOT, false)
+        swUndo?.isChecked = sp.getBoolean(PREF_UNDO_ENABLED, true)
+        swDark?.isChecked = sp.getBoolean(PREF_THEME_DARK, true)
+
+        swFormat?.isChecked = sp.getBoolean(PREF_FORMAT_ON, false)
+        swLineNums?.isChecked = sp.getBoolean(PREF_SHOW_LINE_NUMBERS, false)
+        swRetro?.isChecked = sp.getBoolean(PREF_RETRO_MODE, false)
+        swSyntax?.isChecked = sp.getBoolean(PREF_SYNTAX_HIGHLIGHT, false)
 
         // initial font radio selection
         when (sp.getString(PREF_FONT_SIZE, "normal")) {
-            "small" -> rbSmall.isChecked = true
-            "normal" -> rbNormal.isChecked = true
-            "medium" -> rbMedium.isChecked = true
-            "large" -> rbLarge.isChecked = true
-            else -> rbNormal.isChecked = true
+            "small" -> rbSmall?.isChecked = true
+            "normal" -> rbNormal?.isChecked = true
+            "medium" -> rbMedium?.isChecked = true
+            "large" -> rbLarge?.isChecked = true
+            else -> rbNormal?.isChecked = true
         }
 
         // listener: Prevent screenshots (applies to this window immediately)
-        swPrevent.setOnCheckedChangeListener { _: CompoundButton, checked: Boolean ->
+        swPrevent?.setOnCheckedChangeListener { _: CompoundButton, checked: Boolean ->
             sp.edit().putBoolean(PREF_PREVENT_SCREENSHOT, checked).apply()
             if (checked) {
                 window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
@@ -69,13 +86,13 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         // listener: Undo enabled
-        swUndo.setOnCheckedChangeListener { _: CompoundButton, checked: Boolean ->
+        swUndo?.setOnCheckedChangeListener { _: CompoundButton, checked: Boolean ->
             sp.edit().putBoolean(PREF_UNDO_ENABLED, checked).apply()
             Toast.makeText(this, if (checked) getString(R.string.settings_undo_on) else getString(R.string.settings_undo_off), Toast.LENGTH_SHORT).show()
         }
 
         // listener: Theme toggle (applies immediately across app)
-        swDark.setOnCheckedChangeListener { _: CompoundButton, checked: Boolean ->
+        swDark?.setOnCheckedChangeListener { _: CompoundButton, checked: Boolean ->
             sp.edit().putBoolean(PREF_THEME_DARK, checked).apply()
             AppCompatDelegate.setDefaultNightMode(if (checked) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO)
             // recreate to apply to this activity; EditorActivity reads pref in onResume and will apply on return
@@ -83,8 +100,29 @@ class SettingsActivity : AppCompatActivity() {
             Toast.makeText(this, getString(R.string.settings_theme_changed), Toast.LENGTH_SHORT).show()
         }
 
+        // NEW listeners: format / line numbers / retro / syntax
+        swFormat?.setOnCheckedChangeListener { _: CompoundButton, checked: Boolean ->
+            sp.edit().putBoolean(PREF_FORMAT_ON, checked).apply()
+            Toast.makeText(this, if (checked) getString(R.string.settings_format_on) else getString(R.string.settings_format_off), Toast.LENGTH_SHORT).show()
+        }
+
+        swLineNums?.setOnCheckedChangeListener { _: CompoundButton, checked: Boolean ->
+            sp.edit().putBoolean(PREF_SHOW_LINE_NUMBERS, checked).apply()
+            Toast.makeText(this, if (checked) getString(R.string.settings_line_numbers_on) else getString(R.string.settings_line_numbers_off), Toast.LENGTH_SHORT).show()
+        }
+
+        swRetro?.setOnCheckedChangeListener { _: CompoundButton, checked: Boolean ->
+            sp.edit().putBoolean(PREF_RETRO_MODE, checked).apply()
+            Toast.makeText(this, if (checked) getString(R.string.settings_retro_on) else getString(R.string.settings_retro_off), Toast.LENGTH_SHORT).show()
+        }
+
+        swSyntax?.setOnCheckedChangeListener { _: CompoundButton, checked: Boolean ->
+            sp.edit().putBoolean(PREF_SYNTAX_HIGHLIGHT, checked).apply()
+            Toast.makeText(this, if (checked) getString(R.string.settings_syntax_on) else getString(R.string.settings_syntax_off), Toast.LENGTH_SHORT).show()
+        }
+
         // listener: font size radio group
-        rgFont.setOnCheckedChangeListener { _, checkedId ->
+        rgFont?.setOnCheckedChangeListener { _, checkedId ->
             val value = when (checkedId) {
                 R.id.rbFontSmall -> "small"
                 R.id.rbFontNormal -> "normal"
@@ -94,7 +132,7 @@ class SettingsActivity : AppCompatActivity() {
             }
             sp.edit().putString(PREF_FONT_SIZE, value).apply()
             Toast.makeText(this, getString(R.string.settings_font_changed, value), Toast.LENGTH_SHORT).show()
-            // We don't directly change EditorActivity here — it will re-apply in onResume.
+            // EditorActivity will re-apply in onResume.
         }
     }
 
