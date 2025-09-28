@@ -57,7 +57,6 @@
 
     <!-- Настройки языка -->
     <string name="settings_language_changed">Programming language changed</string>
-</resources>
     
     <!-- select all -->
     <string name="menu_select_all">All</string>
