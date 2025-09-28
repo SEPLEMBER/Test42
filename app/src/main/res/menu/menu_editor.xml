@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+      xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <!-- File group -->
     <item android:id="@+id/menu_file" android:title="@string/menu_file">
@@ -20,29 +20,23 @@
         </menu>
     </item>
 
-    <!-- Quick actions (show on toolbar) -->
+    <!-- Quick actions (moved to root so they can appear directly on toolbar) -->
     <item
-        android:id="@+id/menu_quick"
-        android:title="@string/menu_quick">
-        <menu>
-            <item
-                android:id="@+id/action_undo"
-                android:title="@string/menu_undo"
-                app:showAsAction="always" />
-            <item
-                android:id="@+id/action_redo"
-                android:title="@string/menu_redo"
-                app:showAsAction="always" />
-            <item
-                android:id="@+id/action_find"
-                android:title="@string/menu_find"
-                app:showAsAction="always" />
-            <item
-                android:id="@+id/action_clear"
-                android:title="@string/menu_clear"
-                app:showAsAction="always" />
-        </menu>
-    </item>
+        android:id="@+id/action_undo"
+        android:title="@string/menu_undo"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_redo"
+        android:title="@string/menu_redo"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_find"
+        android:title="@string/menu_find"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_clear"
+        android:title="@string/menu_clear"
+        app:showAsAction="always" />
 
     <!-- Edit group (kept in overflow) -->
     <item android:id="@+id/menu_edit" android:title="@string/menu_edit">
