@@ -6,7 +6,6 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
-import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
@@ -14,16 +13,11 @@ import android.text.Spannable
 import android.text.style.ForegroundColorSpan
 import android.text.TextWatcher
 import android.util.TypedValue
-import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
-import android.view.ViewGroup
-import android.view.WindowManager
 import android.view.ViewTreeObserver
 import android.widget.EditText
-import android.widget.FrameLayout
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -33,8 +27,8 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.*
 import org.syndes.rust.databinding.ActivityEditorBinding
 import java.io.BufferedReader
-import java.io.BufferedWriter
 import java.io.InputStreamReader
+import java.io.BufferedWriter
 import java.io.OutputStreamWriter
 import java.util.ArrayDeque
 import kotlin.math.max
@@ -48,6 +42,7 @@ class EditorActivity : AppCompatActivity() {
     private lateinit var openDocumentLauncher: ActivityResultLauncher<Array<String>>
     private lateinit var createDocumentLauncherSave: ActivityResultLauncher<String>
     private lateinit var createDocumentLauncherSaveAs: ActivityResultLauncher<String>
+    private lateinit var loadSyntaxMappingLauncher: ActivityResultLauncher<Array<String>>
 
     // current doc uri
     private var currentDocumentUri: Uri? = null
@@ -76,29 +71,28 @@ class EditorActivity : AppCompatActivity() {
 
     // new prefs
     private val PREF_FORMAT_ON = "format_on"
-    private val PREF_SHOW_LINE_NUMBERS = "show_line_numbers"
+    private val PREF_SHOW_LINE_NUMBERS = "show_line_numbers" // теперь игнорируется (временно)
     private val PREF_RETRO_MODE = "retro_mode"
     private val PREF_SYNTAX_HIGHLIGHT = "syntax_highlight"
+    private val PREF_SYNTAX_MAPPING_URI = "syntax_mapping_uri"
 
     // coroutine scope helper
     private val bgDispatcher = Dispatchers.Default
 
-    // gutter (line numbers)
-    private var gutter: TextView? = null
-    private var gutterWidth = 0
-    private var gutterVisible = false
-
-    // highlight job
+    // highlight job / observer
     private var highlightJob: Job? = null
     private var scrollObserverAttached = false
     private var onScrollListener: ViewTreeObserver.OnScrollChangedListener? = null
     private var uiUpdateJob: Job? = null
 
-    // simple kotlin keywords for demo highlighting
+    // simple kotlin keywords fallback
     private val kotlinKeywords = setOf(
         "fun","val","var","if","else","for","while","return","import","class","object",
         "private","public","protected","internal","override","when","in","is","null","true","false"
     )
+
+    // loaded mapping from external .txt (token -> color int)
+    private val syntaxMapping = mutableMapOf<String, Int>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // apply theme preference early
@@ -147,6 +141,18 @@ class EditorActivity : AppCompatActivity() {
             }
         }
 
+        // launcher to load syntax mapping file (user picks a .txt mapping via SAF)
+        loadSyntaxMappingLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            uri?.let {
+                lifecycleScope.launch {
+                    parseAndStoreSyntaxMappingFromUri(it)
+                    Toast.makeText(this@EditorActivity, "Syntax mapping loaded", Toast.LENGTH_SHORT).show()
+                    // request a highlight update
+                    scheduleHighlight()
+                }
+            }
+        }
+
         // menu clicks
         binding.toolbar.setOnMenuItemClickListener { item ->
             onOptionsItemSelected(item)
@@ -159,7 +165,7 @@ class EditorActivity : AppCompatActivity() {
         // apply font size preference immediately
         applyFontSizeFromPrefs()
 
-        // apply retro mode / syntax toggle / gutter
+        // apply retro / syntax visuals (this will launch mapping picker if syntax enabled but no mapping loaded)
         applyPrefsVisuals()
 
         // text watcher: update hint, stats (debounced), and history
@@ -183,8 +189,8 @@ class EditorActivity : AppCompatActivity() {
                 scheduleHistorySnapshot()
                 matches = emptyList()
                 currentMatchIdx = -1
-                // if gutter active -> update quickly (debounced)
-                scheduleGutterAndHighlight()
+                // update visible highlight only
+                scheduleHighlight()
             }
         })
 
@@ -210,7 +216,7 @@ class EditorActivity : AppCompatActivity() {
             }
         }
 
-        // attach scroll observer for gutter/highlight updates
+        // attach scroll observer for highlight updates
         attachScrollObserver()
 
         // touch on right edge -> quick scroll (approximate)
@@ -248,7 +254,7 @@ class EditorActivity : AppCompatActivity() {
         }
         applyFontSizeFromPrefs()
         applyPrefsVisuals()
-        scheduleGutterAndHighlight()
+        scheduleHighlight()
     }
 
     override fun onDestroy() {
@@ -319,13 +325,20 @@ class EditorActivity : AppCompatActivity() {
                 if (tlen > 0) {
                     binding.editor.requestFocus()
                     binding.editor.setSelection(0, tlen)
-                    // try to show selection toolbar
+                    // ensure system contextual menu appears (performLongClick + showContextMenu)
                     binding.editor.post {
                         try {
                             binding.editor.performLongClick()
-                        } catch (_: Exception) {}
+                            binding.editor.showContextMenu()
+                        } catch (_: Exception) { /* ignore */ }
                     }
                 }
+                true
+            }
+            // extra: let user load syntax mapping from toolbar (if you add this item to menu)
+            R.id.action_load_syntax -> {
+                // allow user to pick a mapping .txt file (format: token=#RRGGBB)
+                loadSyntaxMappingLauncher.launch(arrayOf("text/*"))
                 true
             }
             R.id.action_encrypt -> { promptEncryptCurrent(); true }
@@ -358,7 +371,7 @@ class EditorActivity : AppCompatActivity() {
             .setMessage("Are you sure you want to clear the entire document? This action can be undone (if Undo is enabled).")
             .setPositiveButton("Clear") { _, _ ->
                 pushUndoSnapshot(binding.editor.text?.toString() ?: "")
-                binding.editor.setText("", TextView.BufferType.EDITABLE)
+                binding.editor.setText("", EditText.BufferType.EDITABLE)
                 binding.editor.setSelection(0)
                 redoStack.clear()
                 scheduleStatsUpdate()
@@ -374,7 +387,7 @@ class EditorActivity : AppCompatActivity() {
             try {
                 try {
                     val takeFlags = (intent?.flags ?: 0) and
-                            (android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                            (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                     contentResolver.takePersistableUriPermission(uri, takeFlags)
                 } catch (_: Exception) { /* ignore */ }
 
@@ -394,13 +407,13 @@ class EditorActivity : AppCompatActivity() {
                 }
 
                 currentDocumentUri = uri
-                binding.editor.setText(content, TextView.BufferType.EDITABLE)
+                binding.editor.setText(content, EditText.BufferType.EDITABLE)
                 binding.editor.setSelection(0)
                 undoStack.clear()
                 redoStack.clear()
                 pushUndoSnapshot(content)
                 scheduleStatsUpdate()
-                scheduleGutterAndHighlight()
+                scheduleHighlight()
                 Toast.makeText(this@EditorActivity, "File opened", Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -434,7 +447,7 @@ class EditorActivity : AppCompatActivity() {
         val view = inflater.inflate(R.layout.dialog_find_replace, null)
         val etFind = view.findViewById<EditText>(R.id.etFind)
         val etReplace = view.findViewById<EditText>(R.id.etReplace)
-        val tvCount = view.findViewById<TextView>(R.id.tvMatchesCount)
+        val tvCount = view.findViewById<android.widget.TextView>(R.id.tvMatchesCount)
         val btnPrev = view.findViewById<View>(R.id.btnPrev)
         val btnNext = view.findViewById<View>(R.id.btnNext)
         val btnR1 = view.findViewById<View>(R.id.btnReplaceOne)
@@ -526,7 +539,7 @@ class EditorActivity : AppCompatActivity() {
                 val regex = Regex(escaped, RegexOption.IGNORE_CASE)
                 val replaced = regex.replace(input = full, replacement = r)
                 withContext(Dispatchers.Main) {
-                    binding.editor.setText(replaced, TextView.BufferType.EDITABLE)
+                    binding.editor.setText(replaced, EditText.BufferType.EDITABLE)
                     binding.editor.setSelection(0)
                     matches = emptyList()
                     currentMatchIdx = -1
@@ -637,11 +650,10 @@ class EditorActivity : AppCompatActivity() {
         binding.editor.setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp)
     }
 
-    // ---------- PREF VISUALS (retro / gutter / syntax) ----------
+    // ---------- PREF VISUALS (retro / syntax) ----------
     private fun applyPrefsVisuals() {
         val sp = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
         val retro = sp.getBoolean(PREF_RETRO_MODE, false)
-        val showGutter = sp.getBoolean(PREF_SHOW_LINE_NUMBERS, false)
         val syntaxOn = sp.getBoolean(PREF_SYNTAX_HIGHLIGHT, false)
 
         // retro mode
@@ -653,29 +665,45 @@ class EditorActivity : AppCompatActivity() {
             binding.editor.setTextColor(getColorFromAttrOrDefault(android.R.attr.textColorPrimary, Color.parseColor("#E0E0E0")))
         }
 
-        // gutter
-        if (showGutter) {
-            ensureGutter()
-            gutterVisible = true
-            gutter?.visibility = View.VISIBLE
-            binding.editor.post {
-                gutter?.let {
-                    if (gutterWidth == 0) {
-                        it.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
-                        gutterWidth = it.measuredWidth
-                        val padLeft = gutterWidth + dpToPx(8)
-                        binding.editor.setPadding(padLeft, binding.editor.paddingTop, binding.editor.paddingRight, binding.editor.paddingBottom)
+        // syntax highlight: if enabled but mapping not loaded -> prompt user to pick mapping file
+        if (syntaxOn) {
+            if (syntaxMapping.isEmpty()) {
+                // try to load mapping from last saved URI in prefs
+                val mappingUriString = sp.getString(PREF_SYNTAX_MAPPING_URI, null)
+                if (!mappingUriString.isNullOrEmpty()) {
+                    try {
+                        val uri = Uri.parse(mappingUriString)
+                        lifecycleScope.launch {
+                            parseAndStoreSyntaxMappingFromUri(uri)
+                            scheduleHighlight()
+                        }
+                    } catch (_: Exception) {
+                        // ignore parse errors and ask user to pick new mapping
+                        promptUserToPickSyntaxMapping()
                     }
+                } else {
+                    // ask user to pick mapping file (only if enabled and none loaded)
+                    promptUserToPickSyntaxMapping()
                 }
+            } else {
+                scheduleHighlight()
             }
         } else {
-            gutterVisible = false
-            gutter?.visibility = View.GONE
-            binding.editor.setPadding(dpToPx(8), binding.editor.paddingTop, binding.editor.paddingRight, binding.editor.paddingBottom)
+            // clear any highlighting if syntax is off
+            clearForegroundSpansInRange(0, binding.editor.text?.length ?: 0)
         }
+    }
 
-        // syntax highlight: schedule update (retro disables)
-        scheduleGutterAndHighlight()
+    private fun promptUserToPickSyntaxMapping() {
+        // launch SAF picker for text/* (user picks mapping .txt file)
+        // Fire this on UI thread
+        binding.root.post {
+            try {
+                loadSyntaxMappingLauncher.launch(arrayOf("text/*"))
+            } catch (_: Exception) {
+                Toast.makeText(this, "Unable to open file picker for syntax mapping", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun getColorFromAttrOrDefault(attr: Int, def: Int): Int {
@@ -689,75 +717,129 @@ class EditorActivity : AppCompatActivity() {
         }
     }
 
-    private fun ensureGutter() {
-        if (gutter != null) return
-        val parent = binding.editor.parent
-        if (parent is ViewGroup) {
-            val tv = TextView(this).apply {
-                setTextColor(getColorFromAttrOrDefault(android.R.attr.textColorSecondary, Color.GRAY))
-                typeface = Typeface.MONOSPACE
-                textSize = binding.editor.textSize / resources.displayMetrics.scaledDensity // textSize returns px; convert
-                setPadding(6, 8, 6, 8)
-                gravity = Gravity.START or Gravity.TOP
-                setBackgroundColor(Color.TRANSPARENT)
-                isClickable = true
-                isFocusable = true
+    // Parse mapping file (format lines: token=#RRGGBB) and store mapping in memory + persist URI
+    private suspend fun parseAndStoreSyntaxMappingFromUri(uri: Uri) {
+        withContext(Dispatchers.IO) {
+            try {
+                contentResolver.openInputStream(uri)?.use { inputStream ->
+                    BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8)).use { br ->
+                        val map = mutableMapOf<String, Int>()
+                        br.forEachLine { raw ->
+                            val line = raw.trim()
+                            if (line.isEmpty()) return@forEachLine
+                            if (line.startsWith("#")) return@forEachLine // comment
+                            // allow token= #RRGGBB or token=#RRGGBB (with/without spaces)
+                            val parts = line.split("=").map { it.trim() }
+                            if (parts.size >= 2) {
+                                val token = parts[0]
+                                val colorStr = parts[1]
+                                try {
+                                    val color = Color.parseColor(colorStr)
+                                    if (token.isNotEmpty()) map[token] = color
+                                } catch (_: Exception) {
+                                    // ignore invalid color
+                                }
+                            }
+                        }
+                        // swap into main map on UI thread
+                        withContext(Dispatchers.Main) {
+                            syntaxMapping.clear()
+                            syntaxMapping.putAll(map)
+                            // persist uri so we can reload next time
+                            getSharedPreferences(prefsName, Context.MODE_PRIVATE).edit().putString(PREF_SYNTAX_MAPPING_URI, uri.toString()).apply()
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                // ignore parse errors but show toast
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@EditorActivity, "Failed to read mapping file: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                }
             }
-            // click on gutter -> jump to clicked line
-            tv.setOnTouchListener { v, ev ->
-                try {
-                    val layout = binding.editor.layout ?: return@setOnTouchListener true
-                    val localY = ev.y + binding.editor.scrollY - (binding.editor.paddingTop)
-                    val targetLine = layout.getLineForVertical(localY.toInt()).coerceIn(0, max(0, layout.lineCount - 1))
-                    val offset = layout.getLineStart(targetLine)
-                    binding.editor.requestFocus()
-                    binding.editor.setSelection(offset)
-                    val y = layout.getLineTop(targetLine)
-                    binding.editor.scrollTo(0, y)
-                } catch (_: Exception) {}
-                true
-            }
-
-            val lp = FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
-            lp.gravity = Gravity.START or Gravity.TOP
-            // parent is FrameLayout in our layout
-            parent.addView(tv, lp)
-            gutter = tv
         }
     }
 
-    private fun scheduleGutterAndHighlight(delayMs: Long = 80L) {
+    // ---------- HIGHLIGHT (visible area only) ----------
+    private fun scheduleHighlight(delayMs: Long = 80L) {
         uiUpdateJob?.cancel()
         uiUpdateJob = lifecycleScope.launch {
             delay(delayMs)
-            updateGutter()
             updateVisibleHighlight()
         }
     }
 
-    private fun updateGutter() {
-        if (!gutterVisible) return
-        val layout = binding.editor.layout ?: return
-        val scrollY = binding.editor.scrollY
-        // account for padding top/bottom to compute visible lines more precisely
-        val topLine = layout.getLineForVertical((scrollY + binding.editor.paddingTop).coerceAtLeast(0))
-        val bottomLine = layout.getLineForVertical((scrollY + binding.editor.height - binding.editor.paddingBottom - 1).coerceAtLeast(0))
-        val clampedTop = topLine.coerceAtLeast(0)
-        val clampedBottom = bottomLine.coerceIn(0, max(0, layout.lineCount - 1))
-        val sb = StringBuilder()
-        for (ln in clampedTop..clampedBottom) {
-            sb.append(ln + 1).append('\n')
+    private fun updateVisibleHighlight() {
+        highlightJob?.cancel()
+        val sp = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        val syntaxOn = sp.getBoolean(PREF_SYNTAX_HIGHLIGHT, false)
+        val retro = sp.getBoolean(PREF_RETRO_MODE, false)
+        if (!syntaxOn || retro) {
+            clearForegroundSpansInRange(0, binding.editor.text?.length ?: 0)
+            return
         }
-        gutter?.text = sb.toString()
+
+        highlightJob = lifecycleScope.launch(bgDispatcher) {
+            val layout = binding.editor.layout ?: return@launch
+            val scrollY = binding.editor.scrollY
+            val topLine = layout.getLineForVertical(scrollY)
+            val bottomLine = layout.getLineForVertical(scrollY + binding.editor.height)
+            val startOffset = layout.getLineStart(topLine).coerceAtLeast(0)
+            val endOffset = layout.getLineEnd(bottomLine).coerceAtMost(binding.editor.text?.length ?: 0)
+
+            val visibleText = binding.editor.text?.subSequence(startOffset, endOffset)?.toString() ?: ""
+            val spansToApply = mutableListOf<Triple<Int, Int, Int>>()
+            if (visibleText.isNotEmpty()) {
+                var idx = 0
+                val len = visibleText.length
+                while (idx < len) {
+                    val c = visibleText[idx]
+                    if (c.isLetter() || c == '_') {
+                        val start = idx
+                        idx++
+                        while (idx < len && (visibleText[idx].isLetterOrDigit() || visibleText[idx] == '_')) idx++
+                        val word = visibleText.substring(start, idx)
+                        // check mapping first
+                        val color = when {
+                            syntaxMapping.containsKey(word) -> syntaxMapping[word]
+                            kotlinKeywords.contains(word) -> Color.parseColor("#82B1FF")
+                            else -> null
+                        }
+                        if (color != null) {
+                            val globalStart = startOffset + start
+                            val globalEnd = startOffset + idx
+                            spansToApply.add(Triple(globalStart, globalEnd, color))
+                        }
+                    } else idx++
+                }
+            }
+
+            withContext(Dispatchers.Main) {
+                try {
+                    clearForegroundSpansInRange(startOffset, endOffset)
+                    val editable = binding.editor.text
+                    if (editable is Spannable) {
+                        for ((s, e, color) in spansToApply) {
+                            editable.setSpan(ForegroundColorSpan(color), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        }
+                    }
+                } catch (_: Exception) {}
+            }
+        }
+    }
+
+    private fun clearForegroundSpansInRange(rangeStart: Int, rangeEnd: Int) {
+        val editable = binding.editor.text ?: return
+        if (editable !is Spannable) return
+        val spans = editable.getSpans(rangeStart, rangeEnd, ForegroundColorSpan::class.java)
+        for (sp in spans) {
+            try { editable.removeSpan(sp) } catch (_: Exception) {}
+        }
     }
 
     private fun attachScrollObserver() {
         if (scrollObserverAttached) return
         onScrollListener = ViewTreeObserver.OnScrollChangedListener {
-            scheduleGutterAndHighlight()
+            scheduleHighlight()
         }
         binding.editor.viewTreeObserver.addOnScrollChangedListener(onScrollListener)
         scrollObserverAttached = true
@@ -799,10 +881,10 @@ class EditorActivity : AppCompatActivity() {
         redoStack.addFirst(current)
         undoStack.removeFirst()
         val prev = undoStack.peekFirst() ?: ""
-        binding.editor.setText(prev, TextView.BufferType.EDITABLE)
+        binding.editor.setText(prev, EditText.BufferType.EDITABLE)
         binding.editor.setSelection(min(prev.length, binding.editor.text?.length ?: prev.length))
         scheduleStatsUpdate()
-        scheduleGutterAndHighlight()
+        scheduleHighlight()
     }
 
     fun performRedo() {
@@ -812,73 +894,10 @@ class EditorActivity : AppCompatActivity() {
         }
         val next = redoStack.removeFirst()
         pushUndoSnapshot(binding.editor.text?.toString() ?: "")
-        binding.editor.setText(next, TextView.BufferType.EDITABLE)
+        binding.editor.setText(next, EditText.BufferType.EDITABLE)
         binding.editor.setSelection(min(next.length, binding.editor.text?.length ?: next.length))
         scheduleStatsUpdate()
-        scheduleGutterAndHighlight()
-    }
-
-    // ---------- HIGHLIGHT (visible area only) ----------
-    private fun updateVisibleHighlight() {
-        highlightJob?.cancel()
-        val sp = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
-        val syntaxOn = sp.getBoolean(PREF_SYNTAX_HIGHLIGHT, false)
-        val retro = sp.getBoolean(PREF_RETRO_MODE, false)
-        if (!syntaxOn || retro) {
-            clearForegroundSpansInRange(0, binding.editor.text?.length ?: 0)
-            return
-        }
-
-        highlightJob = lifecycleScope.launch(bgDispatcher) {
-            val layout = binding.editor.layout ?: return@launch
-            val scrollY = binding.editor.scrollY
-            val topLine = layout.getLineForVertical(scrollY)
-            val bottomLine = layout.getLineForVertical(scrollY + binding.editor.height)
-            val startOffset = layout.getLineStart(topLine).coerceAtLeast(0)
-            val endOffset = layout.getLineEnd(bottomLine).coerceAtMost(binding.editor.text?.length ?: 0)
-
-            val visibleText = binding.editor.text?.subSequence(startOffset, endOffset)?.toString() ?: ""
-            val spansToApply = mutableListOf<Triple<Int, Int, Int>>()
-            if (visibleText.isNotEmpty()) {
-                var idx = 0
-                val len = visibleText.length
-                while (idx < len) {
-                    val c = visibleText[idx]
-                    if (c.isLetter() || c == '_') {
-                        val start = idx
-                        idx++
-                        while (idx < len && (visibleText[idx].isLetterOrDigit() || visibleText[idx] == '_')) idx++
-                        val word = visibleText.substring(start, idx)
-                        if (kotlinKeywords.contains(word)) {
-                            val globalStart = startOffset + start
-                            val globalEnd = startOffset + idx
-                            spansToApply.add(Triple(globalStart, globalEnd, Color.parseColor("#82B1FF")))
-                        }
-                    } else idx++
-                }
-            }
-
-            withContext(Dispatchers.Main) {
-                try {
-                    clearForegroundSpansInRange(startOffset, endOffset)
-                    val editable = binding.editor.text
-                    if (editable is Spannable) {
-                        for ((s, e, color) in spansToApply) {
-                            editable.setSpan(ForegroundColorSpan(color), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-                        }
-                    }
-                } catch (_: Exception) {}
-            }
-        }
-    }
-
-    private fun clearForegroundSpansInRange(rangeStart: Int, rangeEnd: Int) {
-        val editable = binding.editor.text ?: return
-        if (editable !is Spannable) return
-        val spans = editable.getSpans(rangeStart, rangeEnd, ForegroundColorSpan::class.java)
-        for (sp in spans) {
-            try { editable.removeSpan(sp) } catch (_: Exception) {}
-        }
+        scheduleHighlight()
     }
 
     // ---------- ENCRYPT / DECRYPT ----------
@@ -949,7 +968,7 @@ class EditorActivity : AppCompatActivity() {
             try {
                 val encrypted = Secure.encrypt(password, plain)
                 withContext(Dispatchers.Main) {
-                    binding.editor.setText(encrypted, TextView.BufferType.EDITABLE)
+                    binding.editor.setText(encrypted, EditText.BufferType.EDITABLE)
                     binding.editor.setSelection(0)
                     scheduleStatsUpdate()
                     Toast.makeText(this@EditorActivity, "Encryption done", Toast.LENGTH_SHORT).show()
@@ -986,7 +1005,7 @@ class EditorActivity : AppCompatActivity() {
             try {
                 val plain = Secure.decrypt(password, encrypted)
                 withContext(Dispatchers.Main) {
-                    binding.editor.setText(plain, TextView.BufferType.EDITABLE)
+                    binding.editor.setText(plain, EditText.BufferType.EDITABLE)
                     binding.editor.setSelection(0)
                     scheduleStatsUpdate()
                     Toast.makeText(this@EditorActivity, "Decryption done", Toast.LENGTH_SHORT).show()
@@ -1014,7 +1033,7 @@ class EditorActivity : AppCompatActivity() {
 
         val dlg = AlertDialog.Builder(this)
             .setTitle("Settings")
-            .setMessage("Settings available:\n• Prevent screenshots: $prevent\n• Undo enabled: $undo\n• Dark theme: $dark\n• Font size: $font\n• Formatting: $format\n• Line numbers: $gutter\n• Retro: $retro\n• Syntax highlight: $syntax\n\nOpen SettingsActivity to change these.")
+            .setMessage("Settings available:\n• Prevent screenshots: $prevent\n• Undo enabled: $undo\n• Dark theme: $dark\n• Font size: $font\n• Formatting: $format\n• Line numbers (ignored): $gutter\n• Retro: $retro\n• Syntax highlight: $syntax\n\nOpen SettingsActivity to change these.")
             .setPositiveButton("OK", null)
             .create()
         dlg.show()
