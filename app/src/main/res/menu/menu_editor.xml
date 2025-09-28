@@ -12,6 +12,9 @@
             <item
                 android:id="@+id/action_save"
                 android:title="@string/menu_save" />
+            <item
+                android:id="@+id/action_save_as"
+                android:title="@string/menu_save_as" />
         </menu>
     </item>
 
@@ -29,7 +32,26 @@
             <item
                 android:id="@+id/action_find"
                 android:title="@string/menu_find" />
+
+            <item
+                android:id="@+id/action_undo"
+                android:title="@string/menu_undo" />
+            <item
+                android:id="@+id/action_redo"
+                android:title="@string/menu_redo" />
+
+            <item
+                android:id="@+id/action_encrypt"
+                android:title="@string/menu_encrypt" />
+            <item
+                android:id="@+id/action_decrypt"
+                android:title="@string/menu_decrypt" />
         </menu>
     </item>
 
+    <!-- Settings (top level) -->
+    <item
+        android:id="@+id/action_settings"
+        android:title="@string/menu_settings"
+        android:showAsAction="never" />
 </menu>
