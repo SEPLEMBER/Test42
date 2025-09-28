@@ -1,58 +1,78 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
-      xmlns:app="http://schemas.android.com/apk/res-auto">
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <!-- Меню File -->
-    <item
-        android:id="@+id/menu_file"
-        android:title="@string/menu_file">
+    <!-- File group -->
+    <item android:id="@+id/menu_file" android:title="@string/menu_file">
         <menu>
             <item
                 android:id="@+id/action_open"
-                android:title="@string/menu_open" />
+                android:title="@string/menu_open"
+                app:showAsAction="never" />
             <item
                 android:id="@+id/action_save"
-                android:title="@string/menu_save" />
+                android:title="@string/menu_save"
+                app:showAsAction="always" />
             <item
                 android:id="@+id/action_save_as"
-                android:title="@string/menu_save_as" />
+                android:title="@string/menu_save_as"
+                app:showAsAction="never" />
         </menu>
     </item>
 
-    <!-- Меню Edit -->
+    <!-- Quick actions (show on toolbar) -->
     <item
-        android:id="@+id/menu_edit"
-        android:title="@string/menu_edit">
+        android:id="@+id/menu_quick"
+        android:title="@string/menu_quick">
+        <menu>
+            <item
+                android:id="@+id/action_undo"
+                android:title="@string/menu_undo"
+                app:showAsAction="always" />
+            <item
+                android:id="@+id/action_redo"
+                android:title="@string/menu_redo"
+                app:showAsAction="always" />
+            <item
+                android:id="@+id/action_find"
+                android:title="@string/menu_find"
+                app:showAsAction="always" />
+            <item
+                android:id="@+id/action_clear"
+                android:title="@string/menu_clear"
+                app:showAsAction="always" />
+        </menu>
+    </item>
+
+    <!-- Edit group (kept in overflow) -->
+    <item android:id="@+id/menu_edit" android:title="@string/menu_edit">
         <menu>
             <item
                 android:id="@+id/action_copy"
-                android:title="@string/menu_copy" />
+                android:title="@string/menu_copy"
+                app:showAsAction="never" />
             <item
                 android:id="@+id/action_paste"
-                android:title="@string/menu_paste" />
-            <item
-                android:id="@+id/action_find"
-                android:title="@string/menu_find" />
-
-            <item
-                android:id="@+id/action_undo"
-                android:title="@string/menu_undo" />
-            <item
-                android:id="@+id/action_redo"
-                android:title="@string/menu_redo" />
-
+                android:title="@string/menu_paste"
+                app:showAsAction="never" />
             <item
                 android:id="@+id/action_encrypt"
-                android:title="@string/menu_encrypt" />
+                android:title="@string/menu_encrypt"
+                app:showAsAction="never" />
             <item
                 android:id="@+id/action_decrypt"
-                android:title="@string/menu_decrypt" />
+                android:title="@string/menu_decrypt"
+                app:showAsAction="never" />
         </menu>
     </item>
 
-    <!-- Settings (top level) -->
+    <!-- Settings / About -->
     <item
         android:id="@+id/action_settings"
         android:title="@string/menu_settings"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_about"
+        android:title="@string/menu_about"
         app:showAsAction="never" />
 </menu>
