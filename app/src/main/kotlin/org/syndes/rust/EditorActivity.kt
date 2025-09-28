@@ -33,6 +33,9 @@ import java.io.OutputStreamWriter
 import java.util.ArrayDeque
 import kotlin.math.max
 import kotlin.math.min
+import android.view.WindowManager
+import android.widget.TextView.BufferType
+import android.widget.FrameLayout
 
 class EditorActivity : AppCompatActivity() {
 
