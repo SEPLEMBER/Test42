@@ -55,9 +55,22 @@ class SettingsActivity : AppCompatActivity() {
         val rbMedium = findViewById<RadioButton?>(R.id.rbFontMedium)
         val rbLarge = findViewById<RadioButton?>(R.id.rbFontLarge)
 
-        // Language radio group
+        // Language radio group (many languages)
         val rgLang = findViewById<RadioGroup?>(R.id.rgLanguage)
+        val rbPython = findViewById<RadioButton?>(R.id.rbLangPython)
+        val rbJava = findViewById<RadioButton?>(R.id.rbLangJava)
+        val rbJavaScript = findViewById<RadioButton?>(R.id.rbLangJavaScript)
+        val rbCSharp = findViewById<RadioButton?>(R.id.rbLangCSharp)
+        val rbGo = findViewById<RadioButton?>(R.id.rbLangGo)
+        val rbSwift = findViewById<RadioButton?>(R.id.rbLangSwift)
+        val rbPHP = findViewById<RadioButton?>(R.id.rbLangPHP)
+        val rbTS = findViewById<RadioButton?>(R.id.rbLangTypeScript)
         val rbKotlin = findViewById<RadioButton?>(R.id.rbLangKotlin)
+        val rbRuby = findViewById<RadioButton?>(R.id.rbLangRuby)
+        val rbRust = findViewById<RadioButton?>(R.id.rbLangRust)
+        val rbDart = findViewById<RadioButton?>(R.id.rbLangDart)
+        val rbCSS = findViewById<RadioButton?>(R.id.rbLangCSS)
+        val rbHTML = findViewById<RadioButton?>(R.id.rbLangHTML)
 
         // initialize states (null-safe)
         swPrevent?.isChecked = sp.getBoolean(PREF_PREVENT_SCREENSHOT, false)
@@ -71,7 +84,23 @@ class SettingsActivity : AppCompatActivity() {
 
         // language init (default kotlin)
         val lang = sp.getString(PREF_SYNTAX_LANGUAGE, "kotlin") ?: "kotlin"
-        if (lang == "kotlin") rbKotlin?.isChecked = true
+        when (lang) {
+            "python" -> rbPython?.isChecked = true
+            "java" -> rbJava?.isChecked = true
+            "javascript" -> rbJavaScript?.isChecked = true
+            "csharp" -> rbCSharp?.isChecked = true
+            "go" -> rbGo?.isChecked = true
+            "swift" -> rbSwif?.isChecked = true
+            "php" -> rbPHP?.isChecked = true
+            "typescript" -> rbTS?.isChecked = true
+            "kotlin" -> rbKotlin?.isChecked = true
+            "ruby" -> rbRuby?.isChecked = true
+            "rust" -> rbRust?.isChecked = true
+            "dart" -> rbDart?.isChecked = true
+            "css" -> rbCSS?.isChecked = true
+            "html" -> rbHTML?.isChecked = true
+            else -> rbKotlin?.isChecked = true
+        }
 
         // initial font radio selection
         when (sp.getString(PREF_FONT_SIZE, "normal")) {
@@ -103,7 +132,6 @@ class SettingsActivity : AppCompatActivity() {
         // listener: Theme toggle (applies immediately across app)
         swDark?.setOnCheckedChangeListener { _: CompoundButton, checked: Boolean ->
             sp.edit().putBoolean(PREF_THEME_DARK, checked).apply()
-            // ensure amber/retro toggles are not both left enabled — but we keep it simple: user can toggle independently
             AppCompatDelegate.setDefaultNightMode(if (checked) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO)
             recreate()
             Toast.makeText(this, getString(R.string.settings_theme_changed), Toast.LENGTH_SHORT).show()
@@ -127,7 +155,8 @@ class SettingsActivity : AppCompatActivity() {
 
         swAmber?.setOnCheckedChangeListener { _: CompoundButton, checked: Boolean ->
             sp.edit().putBoolean(PREF_AMBER_MODE, checked).apply()
-            Toast.makeText(this, if (checked) getString(R.string.settings_amber_on) else getString(R.string.settings_amber_off), Toast.LENGTH_SHORT).show()
+            // use plain text to avoid missing string-resource crashes
+            Toast.makeText(this, if (checked) "Amber mode enabled" else "Amber mode disabled", Toast.LENGTH_SHORT).show()
         }
 
         // listener: font size radio group
@@ -143,14 +172,28 @@ class SettingsActivity : AppCompatActivity() {
             Toast.makeText(this, getString(R.string.settings_font_changed, value), Toast.LENGTH_SHORT).show()
         }
 
-        // listener: language selection (simple; currently only kotlin)
+        // listener: language selection (expanded list)
         rgLang?.setOnCheckedChangeListener { _, checkedId ->
             val langValue = when (checkedId) {
+                R.id.rbLangPython -> "python"
+                R.id.rbLangJava -> "java"
+                R.id.rbLangJavaScript -> "javascript"
+                R.id.rbLangCSharp -> "csharp"
+                R.id.rbLangGo -> "go"
+                R.id.rbLangSwift -> "swift"
+                R.id.rbLangPHP -> "php"
+                R.id.rbLangTypeScript -> "typescript"
                 R.id.rbLangKotlin -> "kotlin"
+                R.id.rbLangRuby -> "ruby"
+                R.id.rbLangRust -> "rust"
+                R.id.rbLangDart -> "dart"
+                R.id.rbLangCSS -> "css"
+                R.id.rbLangHTML -> "html"
                 else -> "kotlin"
             }
             sp.edit().putString(PREF_SYNTAX_LANGUAGE, langValue).apply()
-            Toast.makeText(this, getString(R.string.settings_language_changed, langValue), Toast.LENGTH_SHORT).show()
+            // keep Toast simple to avoid format/resource pitfalls
+            Toast.makeText(this, "Language set to $langValue", Toast.LENGTH_SHORT).show()
         }
     }
 
