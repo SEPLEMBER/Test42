@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:padding="12dp"
-    android:background="?android:colorBackground">
+    android:background="#0A0A0A">
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar_settings"
@@ -38,7 +38,8 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="@string/settings_prevent_screenshots"
-                    android:textSize="16sp" />
+                    android:textSize="16sp"
+                    android:textColor="#E0E0E0" />
 
                 <Switch
                     android:id="@+id/swPreventScreenshots"
@@ -60,7 +61,8 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="@string/settings_undo_enabled"
-                    android:textSize="16sp" />
+                    android:textSize="16sp"
+                    android:textColor="#E0E0E0" />
 
                 <Switch
                     android:id="@+id/swUndoEnabled"
@@ -68,7 +70,7 @@
                     android:layout_height="wrap_content" />
             </LinearLayout>
 
-            <!-- Theme -->
+            <!-- Theme: Dark toggle -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -82,10 +84,34 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="@string/settings_dark_theme"
-                    android:textSize="16sp" />
+                    android:textSize="16sp"
+                    android:textColor="#E0E0E0" />
 
                 <Switch
                     android:id="@+id/swDarkTheme"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
+
+            <!-- NEW: Amber theme toggle -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/settings_amber_mode"
+                    android:textSize="16sp"
+                    android:textColor="#E0E0E0" />
+
+                <Switch
+                    android:id="@+id/swAmberMode"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content" />
             </LinearLayout>
@@ -104,32 +130,11 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="@string/settings_formatting_support"
-                    android:textSize="16sp" />
+                    android:textSize="16sp"
+                    android:textColor="#E0E0E0" />
 
                 <Switch
                     android:id="@+id/swFormatOn"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
-            </LinearLayout>
-
-            <!-- NEW: Line numbers -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:paddingTop="8dp"
-                android:paddingBottom="8dp">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/settings_line_numbers"
-                    android:textSize="16sp" />
-
-                <Switch
-                    android:id="@+id/swLineNumbers"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content" />
             </LinearLayout>
@@ -148,7 +153,8 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="@string/settings_retro_mode"
-                    android:textSize="16sp" />
+                    android:textSize="16sp"
+                    android:textColor="#E0E0E0" />
 
                 <Switch
                     android:id="@+id/swRetroMode"
@@ -170,13 +176,41 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="@string/settings_syntax_highlight"
-                    android:textSize="16sp" />
+                    android:textSize="16sp"
+                    android:textColor="#E0E0E0" />
 
                 <Switch
                     android:id="@+id/swSyntaxHighlight"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content" />
             </LinearLayout>
+
+            <!-- NEW: Language selection (simple radio group for languages; currently only Kotlin) -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_language"
+                android:textStyle="bold"
+                android:textSize="15sp"
+                android:paddingTop="12dp"
+                android:paddingBottom="8dp"
+                android:textColor="#E0E0E0" />
+
+            <RadioGroup
+                android:id="@+id/rgLanguage"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <RadioButton
+                    android:id="@+id/rbLangKotlin"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Kotlin"
+                    android:textColor="#E0E0E0" />
+
+                <!-- future languages can be added here -->
+            </RadioGroup>
 
             <!-- Divider -->
             <View
@@ -193,7 +227,8 @@
                 android:text="@string/settings_font_size"
                 android:textStyle="bold"
                 android:textSize="15sp"
-                android:paddingBottom="8dp" />
+                android:paddingBottom="8dp"
+                android:textColor="#E0E0E0" />
 
             <RadioGroup
                 android:id="@+id/rgFontSize"
@@ -205,25 +240,29 @@
                     android:id="@+id/rbFontSmall"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/settings_font_small" />
+                    android:text="@string/settings_font_small"
+                    android:textColor="#E0E0E0" />
 
                 <RadioButton
                     android:id="@+id/rbFontNormal"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/settings_font_normal" />
+                    android:text="@string/settings_font_normal"
+                    android:textColor="#E0E0E0" />
 
                 <RadioButton
                     android:id="@+id/rbFontMedium"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/settings_font_medium" />
+                    android:text="@string/settings_font_medium"
+                    android:textColor="#E0E0E0" />
 
                 <RadioButton
                     android:id="@+id/rbFontLarge"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/settings_font_large" />
+                    android:text="@string/settings_font_large"
+                    android:textColor="#E0E0E0" />
             </RadioGroup>
 
         </LinearLayout>
