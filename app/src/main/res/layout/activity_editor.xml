@@ -1,92 +1,143 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/editor_root"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/settings_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/editor_background">
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:background="?android:colorBackground">
 
-    <LinearLayout
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar_settings"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@android:color/transparent" />
+
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical">
+        android:paddingTop="8dp">
 
-        <!-- Toolbar -->
-        <androidx.appcompat.widget.Toolbar
-            android:id="@+id/toolbar"
-            android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            android:popupTheme="@style/ThemeOverlay.AppCompat.Light"
-            android:background="@android:color/transparent" />
-
-        <!-- Divider to visually separate toolbar and editor -->
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#262626" />
-
-        <!-- Stats row -->
-        <TextView
-            android:id="@+id/tvStats"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="8dp"
-            android:text="Words: 0 | Chars: 0"
-            android:textColor="#BDBDBD"
-            android:textSize="13sp" />
-
-        <!-- Editor container -->
-        <FrameLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
+            android:orientation="vertical"
             android:padding="8dp">
 
-            <EditText
-                android:id="@+id/editor"
+            <!-- Prevent screenshots -->
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="@android:color/transparent"
-                android:textColor="#E0E0E0"
-                android:textColorHint="#BDBDBD"
-                android:textSize="16sp"
-                android:inputType="textMultiLine|textNoSuggestions"
-                android:gravity="top|start"
-                android:scrollbars="vertical"
-                android:overScrollMode="ifContentScrolls"
-                android:padding="8dp"
-                android:lineSpacingExtra="2dp"
-                android:importantForAutofill="no"
-                android:hint="Start typing..." />
-
-            <!-- Empty hint centered -->
-            <TextView
-                android:id="@+id/emptyHint"
-                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Empty document — use File → Open/Save"
-                android:textColor="#9E9E9E"
-                android:alpha="0.9"
-                android:layout_gravity="center"
-                android:visibility="gone"/>
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp">
 
-        </FrameLayout>
-    </LinearLayout>
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/settings_prevent_screenshots"
+                    android:textSize="16sp" />
 
-    <!-- Invisible click zones on right edge for jump-to-start and jump-to-end -->
-    <View
-        android:id="@+id/jumpTop"
-        android:layout_width="56dp"
-        android:layout_height="56dp"
-        android:layout_gravity="top|end"
-        android:background="@android:color/transparent"
-        android:contentDescription="Jump to top" />
+                <Switch
+                    android:id="@+id/swPreventScreenshots"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
 
-    <View
-        android:id="@+id/jumpBottom"
-        android:layout_width="56dp"
-        android:layout_height="56dp"
-        android:layout_gravity="bottom|end"
-        android:background="@android:color/transparent"
-        android:contentDescription="Jump to bottom" />
+            <!-- Undo enabled -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp">
 
-</FrameLayout>
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/settings_undo_enabled"
+                    android:textSize="16sp" />
+
+                <Switch
+                    android:id="@+id/swUndoEnabled"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
+
+            <!-- Theme -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/settings_dark_theme"
+                    android:textSize="16sp" />
+
+                <Switch
+                    android:id="@+id/swDarkTheme"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
+
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#DDDDDD"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Font size selection -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_font_size"
+                android:textStyle="bold"
+                android:textSize="15sp"
+                android:paddingBottom="8dp" />
+
+            <RadioGroup
+                android:id="@+id/rgFontSize"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <RadioButton
+                    android:id="@+id/rbFontSmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_font_small" />
+
+                <RadioButton
+                    android:id="@+id/rbFontNormal"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_font_normal" />
+
+                <RadioButton
+                    android:id="@+id/rbFontMedium"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_font_medium" />
+
+                <RadioButton
+                    android:id="@+id/rbFontLarge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_font_large" />
+            </RadioGroup>
+
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>
