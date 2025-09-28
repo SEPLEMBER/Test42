@@ -20,7 +20,7 @@
         </menu>
     </item>
 
-    <!-- Quick actions on toolbar -->
+    <!-- Quick actions on toolbar (text instead of icons) -->
     <item
         android:id="@+id/action_undo"
         android:title="@string/menu_undo"
@@ -36,6 +36,10 @@
     <item
         android:id="@+id/action_clear"
         android:title="@string/menu_clear"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_select_all"
+        android:title="@string/menu_select_all"
         app:showAsAction="always" />
 
     <!-- Edit (overflow only) -->
