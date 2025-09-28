@@ -4,9 +4,9 @@ import android.app.AlertDialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.os.SystemClock
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
@@ -116,7 +116,6 @@ class EditorActivity : AppCompatActivity() {
 
         // text watcher: update hint, stats (debounced), and history
         binding.editor.addTextChangedListener(object : TextWatcher {
-            private var lastChangeTime = 0L
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
                 // push previous state to undo stack on first change if enabled
                 val undoEnabled = getSharedPreferences(prefsName, Context.MODE_PRIVATE).getBoolean(PREF_UNDO_ENABLED, true)
@@ -223,8 +222,14 @@ class EditorActivity : AppCompatActivity() {
                 true
             }
             R.id.action_settings -> {
-                // open settings placeholder — you can implement a SettingsActivity; for now toggle some prefs for demo
-                showSettingsDialog()
+                // open SettingsActivity if available
+                try {
+                    val intent = Intent(this, SettingsActivity::class.java)
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    // fallback to simple dialog
+                    showSettingsFallbackDialog()
+                }
                 true
             }
             else -> super.onOptionsItemSelected(item)
@@ -238,7 +243,7 @@ class EditorActivity : AppCompatActivity() {
                 // try to persist permission if available (best-effort)
                 try {
                     val takeFlags = (intent?.flags ?: 0) and
-                        (android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                            (android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                     contentResolver.takePersistableUriPermission(uri, takeFlags)
                 } catch (_: Exception) { /* ignore */ }
 
@@ -258,8 +263,8 @@ class EditorActivity : AppCompatActivity() {
                 }
 
                 currentDocumentUri = uri
-                // set text on main thread
-                binding.editor.setText(content)
+                // set text on main thread (explicit BufferType to avoid ambiguity)
+                binding.editor.setText(content, TextView.BufferType.EDITABLE)
                 binding.editor.setSelection(0)
                 // store initial state in undo stack
                 undoStack.clear()
@@ -395,7 +400,7 @@ class EditorActivity : AppCompatActivity() {
                 val regex = Regex(escaped, RegexOption.IGNORE_CASE)
                 val replaced = regex.replace(input = full, replacement = r)
                 withContext(Dispatchers.Main) {
-                    binding.editor.setText(replaced)
+                    binding.editor.setText(replaced, TextView.BufferType.EDITABLE)
                     binding.editor.setSelection(0)
                     matches = emptyList()
                     currentMatchIdx = -1
@@ -514,8 +519,8 @@ class EditorActivity : AppCompatActivity() {
         // pop current snapshot
         undoStack.removeFirst()
         val prev = undoStack.peekFirst() ?: ""
-        binding.editor.setText(prev)
-        binding.editor.setSelection(min(prev.length, 0))
+        binding.editor.setText(prev, TextView.BufferType.EDITABLE)
+        binding.editor.setSelection(min(prev.length, binding.editor.text?.length ?: prev.length))
         scheduleStatsUpdate()
     }
 
@@ -526,8 +531,8 @@ class EditorActivity : AppCompatActivity() {
         }
         val next = redoStack.removeFirst()
         pushUndoSnapshot(binding.editor.text?.toString() ?: "")
-        binding.editor.setText(next)
-        binding.editor.setSelection(min(next.length, 0))
+        binding.editor.setText(next, TextView.BufferType.EDITABLE)
+        binding.editor.setSelection(min(next.length, binding.editor.text?.length ?: next.length))
         scheduleStatsUpdate()
     }
 
@@ -611,7 +616,7 @@ class EditorActivity : AppCompatActivity() {
             try {
                 val encrypted = Secure.encrypt(password, plain)
                 withContext(Dispatchers.Main) {
-                    binding.editor.setText(encrypted)
+                    binding.editor.setText(encrypted, TextView.BufferType.EDITABLE)
                     binding.editor.setSelection(0)
                     scheduleStatsUpdate()
                     Toast.makeText(this@EditorActivity, "Encryption done", Toast.LENGTH_SHORT).show()
@@ -657,7 +662,7 @@ class EditorActivity : AppCompatActivity() {
             try {
                 val plain = Secure.decrypt(password, encrypted)
                 withContext(Dispatchers.Main) {
-                    binding.editor.setText(plain)
+                    binding.editor.setText(plain, TextView.BufferType.EDITABLE)
                     binding.editor.setSelection(0)
                     scheduleStatsUpdate()
                     Toast.makeText(this@EditorActivity, "Decryption done", Toast.LENGTH_SHORT).show()
@@ -675,27 +680,16 @@ class EditorActivity : AppCompatActivity() {
         }
     }
 
-    // ---------- SETTINGS DIALOG (simple) ----------
-    private fun showSettingsDialog() {
+    // ---------- SETTINGS (fallback) ----------
+    private fun showSettingsFallbackDialog() {
         val sp = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
         val prevent = sp.getBoolean(PREF_PREVENT_SCREENSHOT, false)
         val undo = sp.getBoolean(PREF_UNDO_ENABLED, true)
         val dark = sp.getBoolean(PREF_THEME_DARK, true)
 
-        val view = LayoutInflater.from(this).inflate(R.layout.dialog_settings_simple, null)
-        // dialog_settings_simple is optional - if not present, fallback to simple toggle dialog below
-        try {
-            val cbPrevent = view.findViewById<View?>(R.id.cbPreventScreenshots)
-            val cbUndo = view.findViewById<View?>(R.id.cbUndo)
-            val cbTheme = view.findViewById<View?>(R.id.cbTheme)
-            // if you add checkboxes in layout, you can set them here. For now we just show a text dialog.
-        } catch (_: Exception) {
-            // ignore missing layout
-        }
-
         val dlg = AlertDialog.Builder(this)
             .setTitle("Settings")
-            .setMessage("Settings available:\n• Prevent screenshots: $prevent\n• Undo enabled: $undo\n• Dark theme: $dark\n\nTo change these, implement a Settings screen (placeholder).")
+            .setMessage("Settings available:\n• Prevent screenshots: $prevent\n• Undo enabled: $undo\n• Dark theme: $dark\n\nOpen SettingsActivity to change these.")
             .setPositiveButton("OK", null)
             .create()
         dlg.show()
