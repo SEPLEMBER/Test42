@@ -185,7 +185,7 @@
                     android:layout_height="wrap_content" />
             </LinearLayout>
 
-            <!-- NEW: Language selection (simple radio group for languages; currently only Kotlin) -->
+            <!-- NEW: Language selection -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -203,13 +203,102 @@
                 android:orientation="vertical">
 
                 <RadioButton
+                    android:id="@+id/rbLangPython"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Python"
+                    android:textColor="#E0E0E0" />
+
+                <RadioButton
+                    android:id="@+id/rbLangJava"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Java"
+                    android:textColor="#E0E0E0" />
+
+                <RadioButton
+                    android:id="@+id/rbLangJavaScript"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="JavaScript"
+                    android:textColor="#E0E0E0" />
+
+                <RadioButton
+                    android:id="@+id/rbLangCSharp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="C#"
+                    android:textColor="#E0E0E0" />
+
+                <RadioButton
+                    android:id="@+id/rbLangGo"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Go"
+                    android:textColor="#E0E0E0" />
+
+                <RadioButton
+                    android:id="@+id/rbLangSwift"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Swift"
+                    android:textColor="#E0E0E0" />
+
+                <RadioButton
+                    android:id="@+id/rbLangPHP"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="PHP"
+                    android:textColor="#E0E0E0" />
+
+                <RadioButton
+                    android:id="@+id/rbLangTypeScript"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="TypeScript"
+                    android:textColor="#E0E0E0" />
+
+                <RadioButton
                     android:id="@+id/rbLangKotlin"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Kotlin"
                     android:textColor="#E0E0E0" />
 
-                <!-- future languages can be added here -->
+                <RadioButton
+                    android:id="@+id/rbLangRuby"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Ruby"
+                    android:textColor="#E0E0E0" />
+
+                <RadioButton
+                    android:id="@+id/rbLangRust"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Rust"
+                    android:textColor="#E0E0E0" />
+
+                <RadioButton
+                    android:id="@+id/rbLangDart"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Dart"
+                    android:textColor="#E0E0E0" />
+
+                <RadioButton
+                    android:id="@+id/rbLangCSS"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="CSS"
+                    android:textColor="#E0E0E0" />
+
+                <RadioButton
+                    android:id="@+id/rbLangHTML"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="HTML"
+                    android:textColor="#E0E0E0" />
             </RadioGroup>
 
             <!-- Divider -->
