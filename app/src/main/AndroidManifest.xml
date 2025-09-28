@@ -31,6 +31,12 @@
             android:exported="false"
             android:theme="@style/AppTheme" />
 
+                <!-- Экран настроек (SettingsActivity) -->
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme" />
+
     </application>
 
 </manifest>
