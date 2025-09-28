@@ -59,11 +59,12 @@ class EditorActivity : AppCompatActivity() {
     private var statsJob: Job? = null
     private var lastStatsText: String = ""
 
-    // Undo/Redo stacks (in-memory)
-    private val undoStack = ArrayDeque<String>()
-    private val redoStack = ArrayDeque<String>()
-    private val maxHistory = 50
+    // History (undo/redo) — switched to linear history with index
+    private val history = ArrayList<String>()
+    private var historyIndex = -1
     private var historyJob: Job? = null
+    private val maxHistory = 50
+    private var ignoreTextWatcher = false
 
     // Preferences
     private val prefsName = "editor_prefs"
@@ -174,22 +175,16 @@ class EditorActivity : AppCompatActivity() {
         // text watcher: update hint, stats (debounced), and history
         binding.editor.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
-                val undoEnabled = getSharedPreferences(prefsName, Context.MODE_PRIVATE).getBoolean(PREF_UNDO_ENABLED, true)
-                if (undoEnabled) {
-                    val current = binding.editor.text?.toString() ?: ""
-                    if (undoStack.isEmpty() || undoStack.peekFirst() != current) {
-                        pushUndoSnapshot(current)
-                        redoStack.clear()
-                    }
-                }
+                // no-op — we handle snapshots in afterTextChanged via debounce
             }
 
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) { /* no-op */ }
 
             override fun afterTextChanged(s: Editable?) {
+                if (ignoreTextWatcher) return
                 binding.emptyHint.visibility = if (s.isNullOrEmpty()) View.VISIBLE else View.GONE
                 scheduleStatsUpdate()
-                scheduleHistorySnapshot()
+                scheduleHistorySnapshot() // debounced snapshot
                 matches = emptyList()
                 currentMatchIdx = -1
                 // update visible highlight only
@@ -245,6 +240,8 @@ class EditorActivity : AppCompatActivity() {
             } catch (_: Exception) { /* ignore touch errors */ }
             false
         }
+
+        // if activity launched with an initial file intent (optional), you might want to open it here
     }
 
     override fun onResume() {
@@ -265,6 +262,7 @@ class EditorActivity : AppCompatActivity() {
         highlightJob?.cancel()
         uiUpdateJob?.cancel()
         statsJob?.cancel()
+        historyJob?.cancel()
     }
 
     // ---------- MENU ACTIONS ----------
@@ -276,7 +274,8 @@ class EditorActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_open -> {
-                openDocumentLauncher.launch(arrayOf("text/*"))
+                // allow any file types — we'll try to read as UTF-8 text
+                openDocumentLauncher.launch(arrayOf("*/*"))
                 true
             }
             R.id.action_save -> {
@@ -327,14 +326,8 @@ class EditorActivity : AppCompatActivity() {
                 val tlen = binding.editor.text?.length ?: 0
                 if (tlen > 0) {
                     binding.editor.requestFocus()
-                    binding.editor.setSelection(0, tlen)
-                    // ensure system contextual menu appears (performLongClick + showContextMenu)
-                    binding.editor.post {
-                        try {
-                            binding.editor.performLongClick()
-                            binding.editor.showContextMenu()
-                        } catch (_: Exception) { /* ignore */ }
-                    }
+                    // simply select all — do not try to force-show the contextual menu
+                    binding.editor.selectAll()
                 }
                 true
             }
@@ -368,10 +361,12 @@ class EditorActivity : AppCompatActivity() {
             .setTitle("Clear document")
             .setMessage("Are you sure you want to clear the entire document? This action can be undone (if Undo is enabled).")
             .setPositiveButton("Clear") { _, _ ->
-                pushUndoSnapshot(binding.editor.text?.toString() ?: "")
+                // snapshot current state before clearing
+                pushHistorySnapshot(binding.editor.text?.toString() ?: "")
+                ignoreTextWatcher = true
                 binding.editor.setText("", TextView.BufferType.EDITABLE)
                 binding.editor.setSelection(0)
-                redoStack.clear()
+                ignoreTextWatcher = false
                 scheduleStatsUpdate()
             }
             .setNegativeButton("Cancel", null)
@@ -405,11 +400,17 @@ class EditorActivity : AppCompatActivity() {
                 }
 
                 currentDocumentUri = uri
+                // set text without triggering history snapshot
+                ignoreTextWatcher = true
                 binding.editor.setText(content, TextView.BufferType.EDITABLE)
                 binding.editor.setSelection(0)
-                undoStack.clear()
-                redoStack.clear()
-                pushUndoSnapshot(content)
+                ignoreTextWatcher = false
+
+                // reset history to the opened content
+                history.clear()
+                historyIndex = -1
+                pushHistorySnapshot(content)
+
                 scheduleStatsUpdate()
                 scheduleHighlight()
                 Toast.makeText(this@EditorActivity, "File opened", Toast.LENGTH_SHORT).show()
@@ -537,12 +538,15 @@ class EditorActivity : AppCompatActivity() {
                 val regex = Regex(escaped, RegexOption.IGNORE_CASE)
                 val replaced = regex.replace(input = full, replacement = r)
                 withContext(Dispatchers.Main) {
+                    ignoreTextWatcher = true
                     binding.editor.setText(replaced, TextView.BufferType.EDITABLE)
                     binding.editor.setSelection(0)
+                    ignoreTextWatcher = false
                     matches = emptyList()
                     currentMatchIdx = -1
                     tvCount.text = "0 matches"
                     scheduleStatsUpdate()
+                    pushHistorySnapshot(replaced)
                     Toast.makeText(this@EditorActivity, "Replaced all", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -843,25 +847,34 @@ class EditorActivity : AppCompatActivity() {
         scrollObserverAttached = true
     }
 
-    // ---------- UNDO / REDO ----------
-    private fun pushUndoSnapshot(value: String) {
-        if (undoStack.peekFirst() == value) return
-        undoStack.addFirst(value)
-        while (undoStack.size > maxHistory) undoStack.removeLast()
+    // ---------- HISTORY helpers (undo/redo) ----------
+    private fun pushHistorySnapshot(value: String) {
+        // add immediate snapshot (used by explicit actions)
+        addHistorySnapshot(value)
+    }
+
+    private fun addHistorySnapshot(value: String) {
+        if (historyIndex >= 0 && historyIndex < history.size && history[historyIndex] == value) return
+        // drop forward history
+        if (historyIndex < history.size - 1) {
+            for (i in history.size - 1 downTo historyIndex + 1) history.removeAt(i)
+        }
+        history.add(value)
+        historyIndex = history.size - 1
+        // trim oldest entries
+        while (history.size > maxHistory) {
+            history.removeAt(0)
+            historyIndex--
+        }
     }
 
     private fun scheduleHistorySnapshot(delayMs: Long = 800L) {
         historyJob?.cancel()
         historyJob = lifecycleScope.launch {
             delay(delayMs)
-            val undoEnabled = getSharedPreferences(prefsName, Context.MODE_PRIVATE).getBoolean(PREF_UNDO_ENABLED, true)
-            if (undoEnabled) {
-                val current = binding.editor.text?.toString() ?: ""
-                if (undoStack.isEmpty() || undoStack.peekFirst() != current) {
-                    pushUndoSnapshot(current)
-                    redoStack.clear()
-                }
-            }
+            if (ignoreTextWatcher) return@launch
+            val current = binding.editor.text?.toString() ?: ""
+            addHistorySnapshot(current)
         }
     }
 
@@ -871,29 +884,31 @@ class EditorActivity : AppCompatActivity() {
             Toast.makeText(this, "Undo disabled in settings", Toast.LENGTH_SHORT).show()
             return
         }
-        if (undoStack.size <= 1) {
+        if (historyIndex <= 0) {
             Toast.makeText(this, "Nothing to undo", Toast.LENGTH_SHORT).show()
             return
         }
-        val current = binding.editor.text?.toString() ?: ""
-        redoStack.addFirst(current)
-        undoStack.removeFirst()
-        val prev = undoStack.peekFirst() ?: ""
+        historyIndex--
+        val prev = history.getOrNull(historyIndex) ?: ""
+        ignoreTextWatcher = true
         binding.editor.setText(prev, TextView.BufferType.EDITABLE)
         binding.editor.setSelection(min(prev.length, binding.editor.text?.length ?: prev.length))
+        ignoreTextWatcher = false
         scheduleStatsUpdate()
         scheduleHighlight()
     }
 
     fun performRedo() {
-        if (redoStack.isEmpty()) {
+        if (historyIndex >= history.size - 1) {
             Toast.makeText(this, "Nothing to redo", Toast.LENGTH_SHORT).show()
             return
         }
-        val next = redoStack.removeFirst()
-        pushUndoSnapshot(binding.editor.text?.toString() ?: "")
+        historyIndex++
+        val next = history.getOrNull(historyIndex) ?: ""
+        ignoreTextWatcher = true
         binding.editor.setText(next, TextView.BufferType.EDITABLE)
         binding.editor.setSelection(min(next.length, binding.editor.text?.length ?: next.length))
+        ignoreTextWatcher = false
         scheduleStatsUpdate()
         scheduleHighlight()
     }
@@ -966,9 +981,12 @@ class EditorActivity : AppCompatActivity() {
             try {
                 val encrypted = Secure.encrypt(password, plain)
                 withContext(Dispatchers.Main) {
+                    ignoreTextWatcher = true
                     binding.editor.setText(encrypted, TextView.BufferType.EDITABLE)
                     binding.editor.setSelection(0)
+                    ignoreTextWatcher = false
                     scheduleStatsUpdate()
+                    pushHistorySnapshot(encrypted)
                     Toast.makeText(this@EditorActivity, "Encryption done", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
@@ -1003,9 +1021,12 @@ class EditorActivity : AppCompatActivity() {
             try {
                 val plain = Secure.decrypt(password, encrypted)
                 withContext(Dispatchers.Main) {
+                    ignoreTextWatcher = true
                     binding.editor.setText(plain, TextView.BufferType.EDITABLE)
                     binding.editor.setSelection(0)
+                    ignoreTextWatcher = false
                     scheduleStatsUpdate()
+                    pushHistorySnapshot(plain)
                     Toast.makeText(this@EditorActivity, "Decryption done", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
