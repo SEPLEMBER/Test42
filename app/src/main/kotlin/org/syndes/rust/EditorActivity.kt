@@ -5,7 +5,9 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
 import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
@@ -14,6 +16,8 @@ import android.text.Layout
 import android.text.Spannable
 import android.text.style.AlignmentSpan
 import android.text.style.ForegroundColorSpan
+import android.text.style.LeadingMarginSpan
+import android.text.style.ReplacementSpan
 import android.text.style.StyleSpan
 import android.text.TextWatcher
 import android.util.TypedValue
@@ -34,7 +38,6 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.BufferedWriter
 import java.io.OutputStreamWriter
-import java.util.ArrayDeque
 import kotlin.math.max
 import kotlin.math.min
 import android.view.WindowManager
@@ -923,11 +926,20 @@ class EditorActivity : AppCompatActivity() {
         for (sp in alignSpans) {
             try { editable.removeSpan(sp) } catch (_: Exception) {}
         }
+        val marginSpans = editable.getSpans(rangeStart, rangeEnd, LeadingMarginSpan::class.java)
+        for (sp in marginSpans) {
+            try { editable.removeSpan(sp) } catch (_: Exception) {}
+        }
+        val hiddenSpans = editable.getSpans(rangeStart, rangeEnd, HiddenTagSpan::class.java)
+        for (sp in hiddenSpans) {
+            try { editable.removeSpan(sp) } catch (_: Exception) {}
+        }
     }
 
     // Very light-weight inline formatting: applies StyleSpan / AlignmentSpan for tags found in the visible range.
     // IMPORTANT: tags remain in text (we only visually style inner content). This matches your requirement:
     // the raw file still contains tags but the editor shows visual formatting.
+    // Now with hiding tags using HiddenTagSpan
     private fun applyInlineFormattingInRange(editable: Spannable, rangeStart: Int, rangeEnd: Int) {
         val raw = editable.subSequence(rangeStart, rangeEnd).toString()
         // <b>...</b>
@@ -935,27 +947,72 @@ class EditorActivity : AppCompatActivity() {
         for (m in boldRegex.findAll(raw)) {
             val inner = m.groups[1] ?: continue
             val openTagLen = "<b>".length
-            val s = rangeStart + m.range.first + openTagLen
-            val e = s + inner.value.length
-            try { editable.setSpan(StyleSpan(Typeface.BOLD), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) } catch (_: Exception) {}
+            val closeTagLen = "</b>".length
+            val openStart = rangeStart + m.range.first
+            val openEnd = openStart + openTagLen
+            val innerStart = openEnd
+            val innerEnd = innerStart + inner.value.length
+            val closeStart = innerEnd
+            val closeEnd = closeStart + closeTagLen
+            try {
+                editable.setSpan(StyleSpan(Typeface.BOLD), innerStart, innerEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                editable.setSpan(HiddenTagSpan(), openStart, openEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                editable.setSpan(HiddenTagSpan(), closeStart, closeEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            } catch (_: Exception) {}
         }
         // <i>...</i>
         val italicRegex = Regex("<i>(.*?)</i>", RegexOption.DOT_MATCHES_ALL)
         for (m in italicRegex.findAll(raw)) {
             val inner = m.groups[1] ?: continue
             val openTagLen = "<i>".length
-            val s = rangeStart + m.range.first + openTagLen
-            val e = s + inner.value.length
-            try { editable.setSpan(StyleSpan(Typeface.ITALIC), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) } catch (_: Exception) {}
+            val closeTagLen = "</i>".length
+            val openStart = rangeStart + m.range.first
+            val openEnd = openStart + openTagLen
+            val innerStart = openEnd
+            val innerEnd = innerStart + inner.value.length
+            val closeStart = innerEnd
+            val closeEnd = closeStart + closeTagLen
+            try {
+                editable.setSpan(StyleSpan(Typeface.ITALIC), innerStart, innerEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                editable.setSpan(HiddenTagSpan(), openStart, openEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                editable.setSpan(HiddenTagSpan(), closeStart, closeEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            } catch (_: Exception) {}
         }
         // <center>...</center> -> AlignmentSpan.Standard
         val centerRegex = Regex("<center>(.*?)</center>", RegexOption.DOT_MATCHES_ALL)
         for (m in centerRegex.findAll(raw)) {
             val inner = m.groups[1] ?: continue
             val openTagLen = "<center>".length
-            val s = rangeStart + m.range.first + openTagLen
-            val e = s + inner.value.length
-            try { editable.setSpan(AlignmentSpan.Standard(Layout.Alignment.ALIGN_CENTER), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) } catch (_: Exception) {}
+            val closeTagLen = "</center>".length
+            val openStart = rangeStart + m.range.first
+            val openEnd = openStart + openTagLen
+            val innerStart = openEnd
+            val innerEnd = innerStart + inner.value.length
+            val closeStart = innerEnd
+            val closeEnd = closeStart + closeTagLen
+            try {
+                editable.setSpan(AlignmentSpan.Standard(Layout.Alignment.ALIGN_CENTER), innerStart, innerEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                editable.setSpan(HiddenTagSpan(), openStart, openEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                editable.setSpan(HiddenTagSpan(), closeStart, closeEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            } catch (_: Exception) {}
+        }
+        // <tab>...</tab> -> LeadingMarginSpan.Standard (e.g., indent by 30dp)
+        val tabRegex = Regex("<tab>(.*?)</tab>", RegexOption.DOT_MATCHES_ALL)
+        for (m in tabRegex.findAll(raw)) {
+            val inner = m.groups[1] ?: continue
+            val openTagLen = "<tab>".length
+            val closeTagLen = "</tab>".length
+            val openStart = rangeStart + m.range.first
+            val openEnd = openStart + openTagLen
+            val innerStart = openEnd
+            val innerEnd = innerStart + inner.value.length
+            val closeStart = innerEnd
+            val closeEnd = closeStart + closeTagLen
+            try {
+                editable.setSpan(LeadingMarginSpan.Standard(dpToPx(30)), innerStart, innerEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                editable.setSpan(HiddenTagSpan(), openStart, openEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                editable.setSpan(HiddenTagSpan(), closeStart, closeEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            } catch (_: Exception) {}
         }
     }
 
@@ -1199,5 +1256,26 @@ class EditorActivity : AppCompatActivity() {
     private fun dpToPx(dp: Int): Int {
         val density = resources.displayMetrics.density
         return (dp * density).toInt()
+    }
+
+    // Custom span to hide tags (zero width, no draw)
+    private class HiddenTagSpan : ReplacementSpan() {
+        override fun getSize(paint: Paint, text: CharSequence?, start: Int, end: Int, fm: Paint.FontMetricsInt?): Int {
+            return 0
+        }
+
+        override fun draw(
+            canvas: Canvas,
+            text: CharSequence?,
+            start: Int,
+            end: Int,
+            x: Float,
+            top: Int,
+            y: Int,
+            bottom: Int,
+            paint: Paint
+        ) {
+            // draw nothing
+        }
     }
 }
