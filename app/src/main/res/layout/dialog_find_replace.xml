@@ -10,21 +10,21 @@
         android:id="@+id/etFind"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Find"
+        android:hint="@string/find_hint"
         android:inputType="text" />
 
     <EditText
         android:id="@+id/etReplace"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Replace with"
+        android:hint="@string/replace_hint"
         android:inputType="text" />
 
     <TextView
         android:id="@+id/tvMatchesCount"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Matches: 0"
+        android:text="@string/matches_count"
         android:paddingTop="8dp" />
 
     <LinearLayout
