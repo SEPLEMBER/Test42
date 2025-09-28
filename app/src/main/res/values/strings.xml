@@ -56,7 +56,7 @@
     <string name="settings_amber_off">Amber theme disabled</string>
 
     <!-- Настройки языка -->
-    <string name="settings_language_changed">Programming language changed</string>
+    <string name="settings_language_changed">Programming language changed %s</string>
     
     <!-- select all -->
     <string name="menu_select_all">All</string>
