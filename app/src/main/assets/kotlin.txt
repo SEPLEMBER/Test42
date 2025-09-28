@@ -1,3 +1,3 @@
 Var=#ff0ff0
-import=ff0ff0
-sid=ff0ff1
+import=#ff0ff0
+sid=#ff0ff1
