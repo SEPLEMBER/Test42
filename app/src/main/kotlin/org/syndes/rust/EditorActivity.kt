@@ -35,12 +35,10 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.BufferedWriter
 import java.io.OutputStreamWriter
-import java.util.ArrayDeque
 import kotlin.math.max
 import kotlin.math.min
 import android.view.WindowManager
 import android.widget.TextView
-import android.widget.FrameLayout
 
 class EditorActivity : AppCompatActivity() {
 
@@ -713,11 +711,29 @@ class EditorActivity : AppCompatActivity() {
     private fun loadSyntaxMappingFromAssetsIfAvailable() {
         val spref = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
         val lang = spref.getString(PREF_SYNTAX_LANGUAGE, "kotlin") ?: "kotlin"
-        val filename = "$lang.txt"
+        // explicit safe interpolation
+        val candidate1 = "${lang}.txt"
+        val candidate2 = "${lang}lang.txt"
         lifecycleScope.launch {
             try {
-                parseAndStoreSyntaxMappingFromAssets(filename)
-                scheduleHighlight()
+                val available = assets.list("")?.toList() ?: emptyList()
+                val found = when {
+                    available.contains(candidate1) -> candidate1
+                    available.contains(candidate2) -> candidate2
+                    else -> null
+                }
+                if (found != null) {
+                    parseAndStoreSyntaxMappingFromAssets(found)
+                    scheduleHighlight()
+                } else {
+                    // if none found, try to open candidate1 directly (catch inside)
+                    try {
+                        parseAndStoreSyntaxMappingFromAssets(candidate1)
+                        scheduleHighlight()
+                    } catch (_: Exception) {
+                        // silently ignore - no asset mapping available
+                    }
+                }
             } catch (_: Exception) {
                 // ignore
             }
