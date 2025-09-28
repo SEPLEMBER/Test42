@@ -68,25 +68,31 @@
                 android:alpha="0.9"
                 android:layout_gravity="center"
                 android:visibility="gone"/>
-
         </FrameLayout>
     </LinearLayout>
 
-    <!-- Invisible click zones on right edge for jump-to-start and jump-to-end -->
+    <!-- Invisible click zones on right edge for jump-to-start and jump-to-end.
+         jumpTop shifted by actionBarSize so it doesn't overlap with the toolbar -->
     <View
         android:id="@+id/jumpTop"
         android:layout_width="56dp"
         android:layout_height="56dp"
+        android:layout_marginTop="?attr/actionBarSize"
         android:layout_gravity="top|end"
         android:background="@android:color/transparent"
-        android:contentDescription="Jump to top" />
+        android:contentDescription="Jump to top"
+        android:clickable="true"
+        android:focusable="true" />
 
     <View
         android:id="@+id/jumpBottom"
         android:layout_width="56dp"
         android:layout_height="56dp"
         android:layout_gravity="bottom|end"
+        android:layout_marginBottom="8dp"
         android:background="@android:color/transparent"
-        android:contentDescription="Jump to bottom" />
+        android:contentDescription="Jump to bottom"
+        android:clickable="true"
+        android:focusable="true" />
 
 </FrameLayout>
