@@ -29,6 +29,7 @@ import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 import java.util.ArrayDeque
 import kotlin.math.min
+import kotlin.math.max
 
 class EditorActivity : AppCompatActivity() {
 
@@ -79,6 +80,15 @@ class EditorActivity : AppCompatActivity() {
 
         setSupportActionBar(binding.toolbar)
         supportActionBar?.title = getString(R.string.app_name)
+
+        // Ensure jump zones are above other overlays and accept clicks
+        binding.jumpTop.isClickable = true
+        binding.jumpTop.isFocusable = true
+        binding.jumpTop.bringToFront()
+
+        binding.jumpBottom.isClickable = true
+        binding.jumpBottom.isFocusable = true
+        binding.jumpBottom.bringToFront()
 
         // Apply FLAG_SECURE if preference set
         if (sp.getBoolean(PREF_PREVENT_SCREENSHOT, false)) {
@@ -163,7 +173,7 @@ class EditorActivity : AppCompatActivity() {
             binding.editor.post {
                 val layout = binding.editor.layout
                 if (layout != null) {
-                    val lastLine = maxOf(0, layout.lineCount - 1)
+                    val lastLine = max(0, layout.lineCount - 1)
                     val y = layout.getLineTop(lastLine)
                     binding.editor.scrollTo(0, y)
                 } else {
@@ -550,6 +560,9 @@ class EditorActivity : AppCompatActivity() {
             }
         }
     }
+
+    // backward-compatible alias
+    private fun updateStatsAsync() = scheduleStatsUpdate()
 
     // ---------- FONT SIZE ----------
     private fun applyFontSizeFromPrefs() {
