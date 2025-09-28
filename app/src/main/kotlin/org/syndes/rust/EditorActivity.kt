@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
@@ -41,7 +42,7 @@ class EditorActivity : AppCompatActivity() {
     // current doc uri
     private var currentDocumentUri: Uri? = null
 
-    // Find/Replace state (kept minimal here)
+    // Find/Replace state
     private var lastQuery: String? = null
     private var matches: List<IntRange> = emptyList()
     private var currentMatchIdx: Int = -1
@@ -61,6 +62,7 @@ class EditorActivity : AppCompatActivity() {
     private val PREF_PREVENT_SCREENSHOT = "prevent_screenshot"
     private val PREF_UNDO_ENABLED = "undo_enabled"
     private val PREF_THEME_DARK = "theme_dark"
+    private val PREF_FONT_SIZE = "font_size" // values: small, normal, medium, large
 
     // coroutine scope helper
     private val bgDispatcher = Dispatchers.Default
@@ -114,6 +116,9 @@ class EditorActivity : AppCompatActivity() {
         binding.emptyHint.visibility = if (binding.editor.text.isNullOrEmpty()) View.VISIBLE else View.GONE
         scheduleStatsUpdate()
 
+        // apply font size preference immediately
+        applyFontSizeFromPrefs()
+
         // text watcher: update hint, stats (debounced), and history
         binding.editor.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
@@ -142,6 +147,44 @@ class EditorActivity : AppCompatActivity() {
                 currentMatchIdx = -1
             }
         })
+
+        // top-right / bottom-right invisible zones for jump-to-start/end
+        binding.jumpTop.setOnClickListener {
+            // move caret and view to start
+            binding.editor.requestFocus()
+            binding.editor.setSelection(0)
+            binding.editor.post { binding.editor.scrollTo(0, 0) }
+        }
+        binding.jumpBottom.setOnClickListener {
+            val len = binding.editor.text?.length ?: 0
+            binding.editor.requestFocus()
+            binding.editor.setSelection(len)
+            // scroll to last line
+            binding.editor.post {
+                val layout = binding.editor.layout
+                if (layout != null) {
+                    val lastLine = maxOf(0, layout.lineCount - 1)
+                    val y = layout.getLineTop(lastLine)
+                    binding.editor.scrollTo(0, y)
+                } else {
+                    binding.editor.scrollTo(0, Int.MAX_VALUE)
+                }
+            }
+        }
+
+        // Clear button in toolbar is handled via menu action (action_clear)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // re-apply prefs in case settings changed
+        val sp = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        if (sp.getBoolean(PREF_PREVENT_SCREENSHOT, false)) {
+            window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+        } else {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
+        applyFontSizeFromPrefs()
     }
 
     // ---------- MENU ACTIONS ----------
@@ -213,6 +256,10 @@ class EditorActivity : AppCompatActivity() {
                 performRedo()
                 true
             }
+            R.id.action_clear -> {
+                confirmAndClear()
+                true
+            }
             R.id.action_encrypt -> {
                 promptEncryptCurrent()
                 true
@@ -232,8 +279,35 @@ class EditorActivity : AppCompatActivity() {
                 }
                 true
             }
+            R.id.action_about -> {
+                // temporary: open settings/activity about
+                try {
+                    val intent = Intent(this, SettingsActivity::class.java)
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    showSettingsFallbackDialog()
+                }
+                true
+            }
             else -> super.onOptionsItemSelected(item)
         }
+    }
+
+    private fun confirmAndClear() {
+        val dlg = AlertDialog.Builder(this)
+            .setTitle("Clear document")
+            .setMessage("Are you sure you want to clear the entire document? This action can be undone (if Undo is enabled).")
+            .setPositiveButton("Clear") { _, _ ->
+                // push snapshot so user can undo
+                pushUndoSnapshot(binding.editor.text?.toString() ?: "")
+                binding.editor.setText("", TextView.BufferType.EDITABLE)
+                binding.editor.setSelection(0)
+                redoStack.clear()
+                scheduleStatsUpdate()
+            }
+            .setNegativeButton("Cancel", null)
+            .create()
+        dlg.show()
     }
 
     // ---------- FILE IO ----------
@@ -298,7 +372,7 @@ class EditorActivity : AppCompatActivity() {
         }
     }
 
-    // ---------- FIND & REPLACE (kept as earlier) ----------
+    // ---------- FIND & REPLACE ----------
     private fun showFindReplaceDialog() {
         val inflater = LayoutInflater.from(this)
         val view = inflater.inflate(R.layout.dialog_find_replace, null)
@@ -477,8 +551,19 @@ class EditorActivity : AppCompatActivity() {
         }
     }
 
-    // backward-compatible alias
-    private fun updateStatsAsync() = scheduleStatsUpdate()
+    // ---------- FONT SIZE ----------
+    private fun applyFontSizeFromPrefs() {
+        val sp = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        val sizePref = sp.getString(PREF_FONT_SIZE, "normal") ?: "normal"
+        val sizeSp = when (sizePref) {
+            "small" -> 14f
+            "normal" -> 16f
+            "medium" -> 18f
+            "large" -> 20f
+            else -> 16f
+        }
+        binding.editor.setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp)
+    }
 
     // ---------- UNDO / REDO ----------
     private fun pushUndoSnapshot(value: String) {
@@ -686,10 +771,11 @@ class EditorActivity : AppCompatActivity() {
         val prevent = sp.getBoolean(PREF_PREVENT_SCREENSHOT, false)
         val undo = sp.getBoolean(PREF_UNDO_ENABLED, true)
         val dark = sp.getBoolean(PREF_THEME_DARK, true)
+        val font = sp.getString(PREF_FONT_SIZE, "normal") ?: "normal"
 
         val dlg = AlertDialog.Builder(this)
             .setTitle("Settings")
-            .setMessage("Settings available:\n• Prevent screenshots: $prevent\n• Undo enabled: $undo\n• Dark theme: $dark\n\nOpen SettingsActivity to change these.")
+            .setMessage("Settings available:\n• Prevent screenshots: $prevent\n• Undo enabled: $undo\n• Dark theme: $dark\n• Font size: $font\n\nOpen SettingsActivity to change these.")
             .setPositiveButton("OK", null)
             .create()
         dlg.show()
