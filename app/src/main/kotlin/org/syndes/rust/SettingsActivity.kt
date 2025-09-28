@@ -5,10 +5,13 @@ import android.os.Bundle
 import android.view.MenuItem
 import android.view.WindowManager
 import android.widget.CompoundButton
+import android.widget.RadioButton
+import android.widget.RadioGroup
 import android.widget.Switch
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.appcompat.widget.Toolbar
 
 class SettingsActivity : AppCompatActivity() {
 
@@ -16,12 +19,13 @@ class SettingsActivity : AppCompatActivity() {
     private val PREF_PREVENT_SCREENSHOT = "prevent_screenshot"
     private val PREF_UNDO_ENABLED = "undo_enabled"
     private val PREF_THEME_DARK = "theme_dark"
+    private val PREF_FONT_SIZE = "font_size" // "small" | "normal" | "medium" | "large"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
 
-        val toolbar = findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar_settings)
+        val toolbar = findViewById<Toolbar>(R.id.toolbar_settings)
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.title = getString(R.string.settings_title)
@@ -32,10 +36,25 @@ class SettingsActivity : AppCompatActivity() {
         val swUndo = findViewById<Switch>(R.id.swUndoEnabled)
         val swDark = findViewById<Switch>(R.id.swDarkTheme)
 
+        val rgFont = findViewById<RadioGroup>(R.id.rgFontSize)
+        val rbSmall = findViewById<RadioButton>(R.id.rbFontSmall)
+        val rbNormal = findViewById<RadioButton>(R.id.rbFontNormal)
+        val rbMedium = findViewById<RadioButton>(R.id.rbFontMedium)
+        val rbLarge = findViewById<RadioButton>(R.id.rbFontLarge)
+
         // initialize states
         swPrevent.isChecked = sp.getBoolean(PREF_PREVENT_SCREENSHOT, false)
         swUndo.isChecked = sp.getBoolean(PREF_UNDO_ENABLED, true)
         swDark.isChecked = sp.getBoolean(PREF_THEME_DARK, true)
+
+        // initial font radio selection
+        when (sp.getString(PREF_FONT_SIZE, "normal")) {
+            "small" -> rbSmall.isChecked = true
+            "normal" -> rbNormal.isChecked = true
+            "medium" -> rbMedium.isChecked = true
+            "large" -> rbLarge.isChecked = true
+            else -> rbNormal.isChecked = true
+        }
 
         // listener: Prevent screenshots (applies to this window immediately)
         swPrevent.setOnCheckedChangeListener { _: CompoundButton, checked: Boolean ->
@@ -59,9 +78,23 @@ class SettingsActivity : AppCompatActivity() {
         swDark.setOnCheckedChangeListener { _: CompoundButton, checked: Boolean ->
             sp.edit().putBoolean(PREF_THEME_DARK, checked).apply()
             AppCompatDelegate.setDefaultNightMode(if (checked) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO)
-            // recreate to apply to this activity; other activities will pick up on restart or when recreated
+            // recreate to apply to this activity; EditorActivity reads pref in onResume and will apply on return
             recreate()
             Toast.makeText(this, getString(R.string.settings_theme_changed), Toast.LENGTH_SHORT).show()
+        }
+
+        // listener: font size radio group
+        rgFont.setOnCheckedChangeListener { _, checkedId ->
+            val value = when (checkedId) {
+                R.id.rbFontSmall -> "small"
+                R.id.rbFontNormal -> "normal"
+                R.id.rbFontMedium -> "medium"
+                R.id.rbFontLarge -> "large"
+                else -> "normal"
+            }
+            sp.edit().putString(PREF_FONT_SIZE, value).apply()
+            Toast.makeText(this, getString(R.string.settings_font_changed, value), Toast.LENGTH_SHORT).show()
+            // We don't directly change EditorActivity here — it will re-apply in onResume.
         }
     }
 
