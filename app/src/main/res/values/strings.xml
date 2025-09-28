@@ -17,16 +17,21 @@
 <string name="menu_settings">Settings</string>
 
 <string name="settings_title">Settings</string>
-<string name="settings_header">Editor settings</string>
 <string name="settings_prevent_screenshots">Prevent screenshots</string>
-<string name="settings_undo_redo">Enable undo/redo</string>
+<string name="settings_undo_enabled">Enable undo/redo</string>
 <string name="settings_dark_theme">Dark theme</string>
-<string name="settings_note_restart">Theme applies immediately; other activities may refresh on recreation.</string>
-<string name="settings_screenshots_protected">Screenshots are now blocked</string>
+<string name="settings_screenshots_protected">Screenshots are now prevented</string>
 <string name="settings_screenshots_allowed">Screenshots allowed</string>
 <string name="settings_undo_on">Undo enabled</string>
 <string name="settings_undo_off">Undo disabled</string>
 <string name="settings_theme_changed">Theme changed</string>
+<string name="settings_font_size">Font size</string>
+<string name="settings_font_small">Small</string>
+<string name="settings_font_normal">Normal</string>
+<string name="settings_font_medium">Medium</string>
+<string name="settings_font_large">Large</string>
+<string name="settings_font_changed">Font size saved: %1$s</string>
+    
     <string name="menu_quick">Quick</string>
 <string name="menu_clear">Clear</string>
 <string name="menu_about">About</string>
