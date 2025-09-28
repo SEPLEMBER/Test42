@@ -90,7 +90,7 @@ class SettingsActivity : AppCompatActivity() {
             "javascript" -> rbJavaScript?.isChecked = true
             "csharp" -> rbCSharp?.isChecked = true
             "go" -> rbGo?.isChecked = true
-            "swift" -> rbSwif?.isChecked = true
+            "swift" -> rbSwift?.isChecked = true
             "php" -> rbPHP?.isChecked = true
             "typescript" -> rbTS?.isChecked = true
             "kotlin" -> rbKotlin?.isChecked = true
