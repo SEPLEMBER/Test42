@@ -37,6 +37,7 @@ import java.io.OutputStreamWriter
 import java.util.ArrayDeque
 import kotlin.math.max
 import kotlin.math.min
+import android.widget.FrameLayout
 
 class EditorActivity : AppCompatActivity() {
 
@@ -727,24 +728,28 @@ class EditorActivity : AppCompatActivity() {
         }
     }
 
-    private fun ensureGutter() {
-        if (gutter != null) return
-        // try to add gutter inside editor's parent FrameLayout
-        val parent = binding.editor.parent
-        if (parent is ViewGroup) {
-            val tv = TextView(this)
-            tv.setTextColor(getColorFromAttrOrDefault(android.R.attr.textColorSecondary, Color.GRAY))
-            tv.typeface = Typeface.MONOSPACE
-            tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            tv.setPadding(6, 8, 6, 8)
-            tv.gravity = Gravity.START or Gravity.TOP
-            tv.setBackgroundColor(Color.TRANSPARENT)
-            val lp = FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT)
-            lp.gravity = Gravity.START or Gravity.TOP
-            parent.addView(tv, lp)
-            gutter = tv
+private fun ensureGutter() {
+    if (gutter != null) return
+    // try to add gutter inside editor's parent FrameLayout
+    val parent = binding.editor.parent
+    if (parent is ViewGroup) {
+        val tv = TextView(this).apply {
+            setTextColor(getColorFromAttrOrDefault(android.R.attr.textColorSecondary, Color.GRAY))
+            typeface = Typeface.MONOSPACE
+            textSize = 12f
+            setPadding(6, 8, 6, 8)
+            gravity = Gravity.START or Gravity.TOP
+            setBackgroundColor(Color.TRANSPARENT)
         }
+        val lp = FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+        )
+        lp.gravity = Gravity.START or Gravity.TOP
+        parent.addView(tv, lp)
+        gutter = tv
     }
+}
 
     private fun scheduleGutterAndHighlight(delayMs: Long = 80L) {
         uiUpdateJob?.cancel()
