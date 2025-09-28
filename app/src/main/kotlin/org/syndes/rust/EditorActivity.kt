@@ -6,11 +6,15 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
+import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
+import android.text.Layout
 import android.text.Spannable
+import android.text.style.AlignmentSpan
 import android.text.style.ForegroundColorSpan
+import android.text.style.StyleSpan
 import android.text.TextWatcher
 import android.util.TypedValue
 import android.view.LayoutInflater
@@ -75,10 +79,12 @@ class EditorActivity : AppCompatActivity() {
 
     // new prefs
     private val PREF_FORMAT_ON = "format_on"
-    private val PREF_SHOW_LINE_NUMBERS = "show_line_numbers" // теперь игнорируется (временно)
+    private val PREF_SHOW_LINE_NUMBERS = "show_line_numbers" // временно игнорируется
     private val PREF_RETRO_MODE = "retro_mode"
     private val PREF_SYNTAX_HIGHLIGHT = "syntax_highlight"
     private val PREF_SYNTAX_MAPPING_URI = "syntax_mapping_uri"
+    private val PREF_SYNTAX_LANGUAGE = "syntax_language" // e.g. "kotlin"
+    private val PREF_AMBER_MODE = "amber_mode"
 
     // coroutine scope helper
     private val bgDispatcher = Dispatchers.Default
@@ -169,13 +175,13 @@ class EditorActivity : AppCompatActivity() {
         // apply font size preference immediately
         applyFontSizeFromPrefs()
 
-        // apply retro / syntax visuals (this will launch mapping picker if syntax enabled but no mapping loaded)
+        // apply retro / syntax visuals (this may load mapping from assets if configured)
         applyPrefsVisuals()
 
         // text watcher: update hint, stats (debounced), and history
         binding.editor.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
-                // no-op — we handle snapshots in afterTextChanged via debounce
+                // no-op — snapshots taken by debounce
             }
 
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) { /* no-op */ }
@@ -187,7 +193,7 @@ class EditorActivity : AppCompatActivity() {
                 scheduleHistorySnapshot() // debounced snapshot
                 matches = emptyList()
                 currentMatchIdx = -1
-                // update visible highlight only
+                // update visible highlight & formatting only
                 scheduleHighlight()
             }
         })
@@ -526,6 +532,8 @@ class EditorActivity : AppCompatActivity() {
             val editable = binding.editor.text ?: return@setOnClickListener
             editable.replace(range.first, range.last + 1, r)
             computeMatchesAndUpdate(q)
+            // push snapshot after replace-one
+            pushHistorySnapshot(binding.editor.text?.toString() ?: "")
         }
 
         btnRAll.setOnClickListener {
@@ -652,14 +660,18 @@ class EditorActivity : AppCompatActivity() {
         binding.editor.setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp)
     }
 
-    // ---------- PREF VISUALS (retro / syntax) ----------
+    // ---------- PREF VISUALS (retro / amber / syntax) ----------
     private fun applyPrefsVisuals() {
         val sp = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
         val retro = sp.getBoolean(PREF_RETRO_MODE, false)
+        val amber = sp.getBoolean(PREF_AMBER_MODE, false)
         val syntaxOn = sp.getBoolean(PREF_SYNTAX_HIGHLIGHT, false)
 
-        // retro mode
-        if (retro) {
+        // amber takes precedence if enabled
+        if (amber) {
+            binding.editor.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
+            binding.editor.setTextColor(Color.parseColor("#FFBF00")) // янтарный
+        } else if (retro) {
             binding.editor.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
             binding.editor.setTextColor(Color.parseColor("#00FF66"))
         } else {
@@ -667,10 +679,10 @@ class EditorActivity : AppCompatActivity() {
             binding.editor.setTextColor(getColorFromAttrOrDefault(android.R.attr.textColorPrimary, Color.parseColor("#E0E0E0")))
         }
 
-        // syntax highlight: if enabled but mapping not loaded -> prompt user to pick mapping file
+        // syntax highlight: if enabled but mapping not loaded -> try to load mapping from either persisted URI or assets (language)
         if (syntaxOn) {
             if (syntaxMapping.isEmpty()) {
-                // try to load mapping from last saved URI in prefs
+                // first try persisted URI
                 val mappingUriString = sp.getString(PREF_SYNTAX_MAPPING_URI, null)
                 if (!mappingUriString.isNullOrEmpty()) {
                     try {
@@ -680,12 +692,12 @@ class EditorActivity : AppCompatActivity() {
                             scheduleHighlight()
                         }
                     } catch (_: Exception) {
-                        // ignore parse errors and ask user to pick new mapping
-                        promptUserToPickSyntaxMapping()
+                        // fallback to assets language file
+                        loadSyntaxMappingFromAssetsIfAvailable()
                     }
                 } else {
-                    // ask user to pick mapping file (only if enabled and none loaded)
-                    promptUserToPickSyntaxMapping()
+                    // fallback to assets language file
+                    loadSyntaxMappingFromAssetsIfAvailable()
                 }
             } else {
                 scheduleHighlight()
@@ -693,6 +705,21 @@ class EditorActivity : AppCompatActivity() {
         } else {
             // clear any highlighting if syntax is off
             clearForegroundSpansInRange(0, binding.editor.text?.length ?: 0)
+            clearFormattingSpansInRange(0, binding.editor.text?.length ?: 0)
+        }
+    }
+
+    private fun loadSyntaxMappingFromAssetsIfAvailable() {
+        val spref = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        val lang = spref.getString(PREF_SYNTAX_LANGUAGE, "kotlin") ?: "kotlin"
+        val filename = "$lang.txt"
+        lifecycleScope.launch {
+            try {
+                parseAndStoreSyntaxMappingFromAssets(filename)
+                scheduleHighlight()
+            } catch (_: Exception) {
+                // ignore
+            }
         }
     }
 
@@ -761,6 +788,44 @@ class EditorActivity : AppCompatActivity() {
         }
     }
 
+    // Parse mapping file from assets/<filename>
+    private suspend fun parseAndStoreSyntaxMappingFromAssets(filename: String) {
+        withContext(Dispatchers.IO) {
+            try {
+                assets.open(filename).use { inputStream ->
+                    BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8)).use { br ->
+                        val map = mutableMapOf<String, Int>()
+                        br.forEachLine { raw ->
+                            val line = raw.trim()
+                            if (line.isEmpty()) return@forEachLine
+                            if (line.startsWith("#")) return@forEachLine // comment
+                            val parts = line.split("=").map { it.trim() }
+                            if (parts.size >= 2) {
+                                val token = parts[0]
+                                val colorStr = parts[1]
+                                try {
+                                    val color = Color.parseColor(colorStr)
+                                    if (token.isNotEmpty()) map[token] = color
+                                } catch (_: Exception) {
+                                    // ignore invalid color
+                                }
+                            }
+                        }
+                        withContext(Dispatchers.Main) {
+                            syntaxMapping.clear()
+                            syntaxMapping.putAll(map)
+                            // do not persist assets as URI; but store language pref (already done via settings)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@EditorActivity, "Failed to read mapping asset: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
     // ---------- HIGHLIGHT (visible area only) ----------
     private fun scheduleHighlight(delayMs: Long = 80L) {
         uiUpdateJob?.cancel()
@@ -775,8 +840,10 @@ class EditorActivity : AppCompatActivity() {
         val sp = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
         val syntaxOn = sp.getBoolean(PREF_SYNTAX_HIGHLIGHT, false)
         val retro = sp.getBoolean(PREF_RETRO_MODE, false)
+        val formatOn = sp.getBoolean(PREF_FORMAT_ON, false)
         if (!syntaxOn || retro) {
             clearForegroundSpansInRange(0, binding.editor.text?.length ?: 0)
+            if (!formatOn) clearFormattingSpansInRange(0, binding.editor.text?.length ?: 0)
             return
         }
 
@@ -823,6 +890,13 @@ class EditorActivity : AppCompatActivity() {
                         for ((s, e, color) in spansToApply) {
                             editable.setSpan(ForegroundColorSpan(color), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                         }
+                        // formatting spans if enabled
+                        if (formatOn) {
+                            clearFormattingSpansInRange(startOffset, endOffset)
+                            applyInlineFormattingInRange(editable, startOffset, endOffset)
+                        } else {
+                            clearFormattingSpansInRange(startOffset, endOffset)
+                        }
                     }
                 } catch (_: Exception) {}
             }
@@ -835,6 +909,53 @@ class EditorActivity : AppCompatActivity() {
         val spans = editable.getSpans(rangeStart, rangeEnd, ForegroundColorSpan::class.java)
         for (sp in spans) {
             try { editable.removeSpan(sp) } catch (_: Exception) {}
+        }
+    }
+
+    private fun clearFormattingSpansInRange(rangeStart: Int, rangeEnd: Int) {
+        val editable = binding.editor.text ?: return
+        if (editable !is Spannable) return
+        val styleSpans = editable.getSpans(rangeStart, rangeEnd, StyleSpan::class.java)
+        for (sp in styleSpans) {
+            try { editable.removeSpan(sp) } catch (_: Exception) {}
+        }
+        val alignSpans = editable.getSpans(rangeStart, rangeEnd, AlignmentSpan::class.java)
+        for (sp in alignSpans) {
+            try { editable.removeSpan(sp) } catch (_: Exception) {}
+        }
+    }
+
+    // Very light-weight inline formatting: applies StyleSpan / AlignmentSpan for tags found in the visible range.
+    // IMPORTANT: tags remain in text (we only visually style inner content). This matches your requirement:
+    // the raw file still contains tags but the editor shows visual formatting.
+    private fun applyInlineFormattingInRange(editable: Spannable, rangeStart: Int, rangeEnd: Int) {
+        val raw = editable.subSequence(rangeStart, rangeEnd).toString()
+        // <b>...</b>
+        val boldRegex = Regex("<b>(.*?)</b>", RegexOption.DOT_MATCHES_ALL)
+        for (m in boldRegex.findAll(raw)) {
+            val inner = m.groups[1] ?: continue
+            val openTagLen = "<b>".length
+            val s = rangeStart + m.range.first + openTagLen
+            val e = s + inner.value.length
+            try { editable.setSpan(StyleSpan(Typeface.BOLD), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) } catch (_: Exception) {}
+        }
+        // <i>...</i>
+        val italicRegex = Regex("<i>(.*?)</i>", RegexOption.DOT_MATCHES_ALL)
+        for (m in italicRegex.findAll(raw)) {
+            val inner = m.groups[1] ?: continue
+            val openTagLen = "<i>".length
+            val s = rangeStart + m.range.first + openTagLen
+            val e = s + inner.value.length
+            try { editable.setSpan(StyleSpan(Typeface.ITALIC), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) } catch (_: Exception) {}
+        }
+        // <center>...</center> -> AlignmentSpan.Standard
+        val centerRegex = Regex("<center>(.*?)</center>", RegexOption.DOT_MATCHES_ALL)
+        for (m in centerRegex.findAll(raw)) {
+            val inner = m.groups[1] ?: continue
+            val openTagLen = "<center>".length
+            val s = rangeStart + m.range.first + openTagLen
+            val e = s + inner.value.length
+            try { editable.setSpan(AlignmentSpan.Standard(Layout.Alignment.ALIGN_CENTER), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) } catch (_: Exception) {}
         }
     }
 
