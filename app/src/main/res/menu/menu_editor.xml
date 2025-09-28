@@ -2,7 +2,7 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
       xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <!-- File group -->
+    <!-- File -->
     <item android:id="@+id/menu_file" android:title="@string/menu_file">
         <menu>
             <item
@@ -20,7 +20,7 @@
         </menu>
     </item>
 
-    <!-- Quick actions (moved to root so they can appear directly on toolbar) -->
+    <!-- Quick actions on toolbar -->
     <item
         android:id="@+id/action_undo"
         android:title="@string/menu_undo"
@@ -38,7 +38,7 @@
         android:title="@string/menu_clear"
         app:showAsAction="always" />
 
-    <!-- Edit group (kept in overflow) -->
+    <!-- Edit (overflow only) -->
     <item android:id="@+id/menu_edit" android:title="@string/menu_edit">
         <menu>
             <item
