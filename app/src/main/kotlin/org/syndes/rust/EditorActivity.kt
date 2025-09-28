@@ -34,7 +34,7 @@ import java.util.ArrayDeque
 import kotlin.math.max
 import kotlin.math.min
 import android.view.WindowManager
-import android.widget.TextView.BufferType
+import android.widget.TextView
 import android.widget.FrameLayout
 
 class EditorActivity : AppCompatActivity() {
@@ -338,12 +338,7 @@ class EditorActivity : AppCompatActivity() {
                 }
                 true
             }
-            // extra: let user load syntax mapping from toolbar (if you add this item to menu)
-            R.id.action_load_syntax -> {
-                // allow user to pick a mapping .txt file (format: token=#RRGGBB)
-                loadSyntaxMappingLauncher.launch(arrayOf("text/*"))
-                true
-            }
+            // note: removed reference to R.id.action_load_syntax to avoid resource missing errors.
             R.id.action_encrypt -> { promptEncryptCurrent(); true }
             R.id.action_decrypt -> { promptDecryptCurrent(); true }
             R.id.action_settings -> {
@@ -374,7 +369,7 @@ class EditorActivity : AppCompatActivity() {
             .setMessage("Are you sure you want to clear the entire document? This action can be undone (if Undo is enabled).")
             .setPositiveButton("Clear") { _, _ ->
                 pushUndoSnapshot(binding.editor.text?.toString() ?: "")
-                binding.editor.setText("", EditText.BufferType.EDITABLE)
+                binding.editor.setText("", TextView.BufferType.EDITABLE)
                 binding.editor.setSelection(0)
                 redoStack.clear()
                 scheduleStatsUpdate()
@@ -410,7 +405,7 @@ class EditorActivity : AppCompatActivity() {
                 }
 
                 currentDocumentUri = uri
-                binding.editor.setText(content, EditText.BufferType.EDITABLE)
+                binding.editor.setText(content, TextView.BufferType.EDITABLE)
                 binding.editor.setSelection(0)
                 undoStack.clear()
                 redoStack.clear()
@@ -542,7 +537,7 @@ class EditorActivity : AppCompatActivity() {
                 val regex = Regex(escaped, RegexOption.IGNORE_CASE)
                 val replaced = regex.replace(input = full, replacement = r)
                 withContext(Dispatchers.Main) {
-                    binding.editor.setText(replaced, EditText.BufferType.EDITABLE)
+                    binding.editor.setText(replaced, TextView.BufferType.EDITABLE)
                     binding.editor.setSelection(0)
                     matches = emptyList()
                     currentMatchIdx = -1
@@ -884,7 +879,7 @@ class EditorActivity : AppCompatActivity() {
         redoStack.addFirst(current)
         undoStack.removeFirst()
         val prev = undoStack.peekFirst() ?: ""
-        binding.editor.setText(prev, EditText.BufferType.EDITABLE)
+        binding.editor.setText(prev, TextView.BufferType.EDITABLE)
         binding.editor.setSelection(min(prev.length, binding.editor.text?.length ?: prev.length))
         scheduleStatsUpdate()
         scheduleHighlight()
@@ -897,7 +892,7 @@ class EditorActivity : AppCompatActivity() {
         }
         val next = redoStack.removeFirst()
         pushUndoSnapshot(binding.editor.text?.toString() ?: "")
-        binding.editor.setText(next, EditText.BufferType.EDITABLE)
+        binding.editor.setText(next, TextView.BufferType.EDITABLE)
         binding.editor.setSelection(min(next.length, binding.editor.text?.length ?: next.length))
         scheduleStatsUpdate()
         scheduleHighlight()
@@ -971,7 +966,7 @@ class EditorActivity : AppCompatActivity() {
             try {
                 val encrypted = Secure.encrypt(password, plain)
                 withContext(Dispatchers.Main) {
-                    binding.editor.setText(encrypted, EditText.BufferType.EDITABLE)
+                    binding.editor.setText(encrypted, TextView.BufferType.EDITABLE)
                     binding.editor.setSelection(0)
                     scheduleStatsUpdate()
                     Toast.makeText(this@EditorActivity, "Encryption done", Toast.LENGTH_SHORT).show()
@@ -1008,7 +1003,7 @@ class EditorActivity : AppCompatActivity() {
             try {
                 val plain = Secure.decrypt(password, encrypted)
                 withContext(Dispatchers.Main) {
-                    binding.editor.setText(plain, EditText.BufferType.EDITABLE)
+                    binding.editor.setText(plain, TextView.BufferType.EDITABLE)
                     binding.editor.setSelection(0)
                     scheduleStatsUpdate()
                     Toast.makeText(this@EditorActivity, "Decryption done", Toast.LENGTH_SHORT).show()
