@@ -23,9 +23,10 @@ class SettingsActivity : AppCompatActivity() {
 
     // new options
     private val PREF_FORMAT_ON = "format_on"
-    private val PREF_SHOW_LINE_NUMBERS = "show_line_numbers"
     private val PREF_RETRO_MODE = "retro_mode"
     private val PREF_SYNTAX_HIGHLIGHT = "syntax_highlight"
+    private val PREF_AMBER_MODE = "amber_mode"
+    private val PREF_SYNTAX_LANGUAGE = "syntax_language" // e.g. "kotlin"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,11 +43,11 @@ class SettingsActivity : AppCompatActivity() {
         val swUndo = findViewById<Switch?>(R.id.swUndoEnabled)
         val swDark = findViewById<Switch?>(R.id.swDarkTheme)
 
-        // NEW switches (optional in layout — handled null-safe)
+        // NEW switches (null-safe)
         val swFormat = findViewById<Switch?>(R.id.swFormatOn)
-        val swLineNums = findViewById<Switch?>(R.id.swLineNumbers)
         val swRetro = findViewById<Switch?>(R.id.swRetroMode)
         val swSyntax = findViewById<Switch?>(R.id.swSyntaxHighlight)
+        val swAmber = findViewById<Switch?>(R.id.swAmberMode)
 
         val rgFont = findViewById<RadioGroup?>(R.id.rgFontSize)
         val rbSmall = findViewById<RadioButton?>(R.id.rbFontSmall)
@@ -54,15 +55,23 @@ class SettingsActivity : AppCompatActivity() {
         val rbMedium = findViewById<RadioButton?>(R.id.rbFontMedium)
         val rbLarge = findViewById<RadioButton?>(R.id.rbFontLarge)
 
+        // Language radio group
+        val rgLang = findViewById<RadioGroup?>(R.id.rgLanguage)
+        val rbKotlin = findViewById<RadioButton?>(R.id.rbLangKotlin)
+
         // initialize states (null-safe)
         swPrevent?.isChecked = sp.getBoolean(PREF_PREVENT_SCREENSHOT, false)
         swUndo?.isChecked = sp.getBoolean(PREF_UNDO_ENABLED, true)
         swDark?.isChecked = sp.getBoolean(PREF_THEME_DARK, true)
 
         swFormat?.isChecked = sp.getBoolean(PREF_FORMAT_ON, false)
-        swLineNums?.isChecked = sp.getBoolean(PREF_SHOW_LINE_NUMBERS, false)
         swRetro?.isChecked = sp.getBoolean(PREF_RETRO_MODE, false)
         swSyntax?.isChecked = sp.getBoolean(PREF_SYNTAX_HIGHLIGHT, false)
+        swAmber?.isChecked = sp.getBoolean(PREF_AMBER_MODE, false)
+
+        // language init (default kotlin)
+        val lang = sp.getString(PREF_SYNTAX_LANGUAGE, "kotlin") ?: "kotlin"
+        if (lang == "kotlin") rbKotlin?.isChecked = true
 
         // initial font radio selection
         when (sp.getString(PREF_FONT_SIZE, "normal")) {
@@ -94,21 +103,16 @@ class SettingsActivity : AppCompatActivity() {
         // listener: Theme toggle (applies immediately across app)
         swDark?.setOnCheckedChangeListener { _: CompoundButton, checked: Boolean ->
             sp.edit().putBoolean(PREF_THEME_DARK, checked).apply()
+            // ensure amber/retro toggles are not both left enabled — but we keep it simple: user can toggle independently
             AppCompatDelegate.setDefaultNightMode(if (checked) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO)
-            // recreate to apply to this activity; EditorActivity reads pref in onResume and will apply on return
             recreate()
             Toast.makeText(this, getString(R.string.settings_theme_changed), Toast.LENGTH_SHORT).show()
         }
 
-        // NEW listeners: format / line numbers / retro / syntax
+        // NEW listeners: format / retro / syntax / amber
         swFormat?.setOnCheckedChangeListener { _: CompoundButton, checked: Boolean ->
             sp.edit().putBoolean(PREF_FORMAT_ON, checked).apply()
             Toast.makeText(this, if (checked) getString(R.string.settings_format_on) else getString(R.string.settings_format_off), Toast.LENGTH_SHORT).show()
-        }
-
-        swLineNums?.setOnCheckedChangeListener { _: CompoundButton, checked: Boolean ->
-            sp.edit().putBoolean(PREF_SHOW_LINE_NUMBERS, checked).apply()
-            Toast.makeText(this, if (checked) getString(R.string.settings_line_numbers_on) else getString(R.string.settings_line_numbers_off), Toast.LENGTH_SHORT).show()
         }
 
         swRetro?.setOnCheckedChangeListener { _: CompoundButton, checked: Boolean ->
@@ -119,6 +123,11 @@ class SettingsActivity : AppCompatActivity() {
         swSyntax?.setOnCheckedChangeListener { _: CompoundButton, checked: Boolean ->
             sp.edit().putBoolean(PREF_SYNTAX_HIGHLIGHT, checked).apply()
             Toast.makeText(this, if (checked) getString(R.string.settings_syntax_on) else getString(R.string.settings_syntax_off), Toast.LENGTH_SHORT).show()
+        }
+
+        swAmber?.setOnCheckedChangeListener { _: CompoundButton, checked: Boolean ->
+            sp.edit().putBoolean(PREF_AMBER_MODE, checked).apply()
+            Toast.makeText(this, if (checked) getString(R.string.settings_amber_on) else getString(R.string.settings_amber_off), Toast.LENGTH_SHORT).show()
         }
 
         // listener: font size radio group
@@ -132,7 +141,16 @@ class SettingsActivity : AppCompatActivity() {
             }
             sp.edit().putString(PREF_FONT_SIZE, value).apply()
             Toast.makeText(this, getString(R.string.settings_font_changed, value), Toast.LENGTH_SHORT).show()
-            // EditorActivity will re-apply in onResume.
+        }
+
+        // listener: language selection (simple; currently only kotlin)
+        rgLang?.setOnCheckedChangeListener { _, checkedId ->
+            val langValue = when (checkedId) {
+                R.id.rbLangKotlin -> "kotlin"
+                else -> "kotlin"
+            }
+            sp.edit().putString(PREF_SYNTAX_LANGUAGE, langValue).apply()
+            Toast.makeText(this, getString(R.string.settings_language_changed, langValue), Toast.LENGTH_SHORT).show()
         }
     }
 
