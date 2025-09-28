@@ -51,6 +51,13 @@
     <string name="settings_syntax_off">Syntax highlighting disabled</string>
     <string name="settings_amber_mode">Amber</string>
     <string name="settings_language">Language</string>
+
+        <string name="settings_amber_on">Amber theme enabled</string>
+    <string name="settings_amber_off">Amber theme disabled</string>
+
+    <!-- Настройки языка -->
+    <string name="settings_language_changed">Programming language changed</string>
+</resources>
     
     <!-- select all -->
     <string name="menu_select_all">All</string>
