@@ -31,6 +31,35 @@
 <string name="settings_font_medium">Medium</string>
 <string name="settings_font_large">Large</string>
 <string name="settings_font_changed">Font size saved: %1$s</string>
+        <!-- Settings new labels -->
+    <string name="settings_formatting_support">Formatting support</string>
+    <string name="settings_line_numbers">Show line numbers</string>
+    <string name="settings_retro_mode">Retro mode (green text)</string>
+    <string name="settings_syntax_highlight">Syntax highlighting</string>
+
+    <!-- toggles feedback -->
+    <string name="settings_format_on">Formatting enabled</string>
+    <string name="settings_format_off">Formatting disabled</string>
+
+    <string name="settings_line_numbers_on">Line numbers enabled</string>
+    <string name="settings_line_numbers_off">Line numbers disabled</string>
+
+    <string name="settings_retro_on">Retro mode enabled</string>
+    <string name="settings_retro_off">Retro mode disabled</string>
+
+    <string name="settings_syntax_on">Syntax highlighting enabled</string>
+    <string name="settings_syntax_off">Syntax highlighting disabled</string>
+
+    <!-- select all -->
+    <string name="menu_select_all">All</string>
+
+    <!-- find dialog -->
+    <string name="find_hint">Find (use :123 to jump to line 123)</string>
+    <string name="replace_hint">Replace with</string>
+    <string name="matches_count">Matches: 0</string>
+
+    <!-- small helper text for font change -->
+    <string name="settings_font_changed">Font size changed: %1$s</string>
     
     <string name="menu_quick">Quick</string>
 <string name="menu_clear">Clear</string>
