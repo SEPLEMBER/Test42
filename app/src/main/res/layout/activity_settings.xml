@@ -4,8 +4,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/editor_background"
-    android:padding="8dp">
+    android:padding="12dp"
+    android:background="?android:colorBackground">
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar_settings"
@@ -13,83 +13,131 @@
         android:layout_height="?attr/actionBarSize"
         android:background="@android:color/transparent" />
 
-    <View
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="#262626"
-        android:layout_marginTop="4dp"
-        android:layout_marginBottom="8dp"/>
+        android:layout_height="match_parent"
+        android:paddingTop="8dp">
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/settings_header"
-        android:textColor="#BDBDBD"
-        android:textSize="14sp"
-        android:paddingBottom="8dp"/>
-
-    <!-- Prevent screenshots -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="8dp"
-        android:gravity="center_vertical">
-        <TextView
-            android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/settings_prevent_screenshots"
-            android:textColor="#E0E0E0"/>
-        <Switch
-            android:id="@+id/swPreventScreenshots"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
-    </LinearLayout>
+            android:orientation="vertical"
+            android:padding="8dp">
 
-    <!-- Undo/Redo enabled -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="8dp"
-        android:gravity="center_vertical">
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/settings_undo_redo"
-            android:textColor="#E0E0E0"/>
-        <Switch
-            android:id="@+id/swUndoEnabled"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
-    </LinearLayout>
+            <!-- Prevent screenshots -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp">
 
-    <!-- Theme -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="8dp"
-        android:gravity="center_vertical">
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/settings_dark_theme"
-            android:textColor="#E0E0E0"/>
-        <Switch
-            android:id="@+id/swDarkTheme"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
-    </LinearLayout>
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/settings_prevent_screenshots"
+                    android:textSize="16sp" />
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/settings_note_restart"
-        android:textColor="#9E9E9E"
-        android:textSize="12sp"
-        android:paddingTop="12dp"/>
+                <Switch
+                    android:id="@+id/swPreventScreenshots"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
+
+            <!-- Undo enabled -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/settings_undo_enabled"
+                    android:textSize="16sp" />
+
+                <Switch
+                    android:id="@+id/swUndoEnabled"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
+
+            <!-- Theme -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/settings_dark_theme"
+                    android:textSize="16sp" />
+
+                <Switch
+                    android:id="@+id/swDarkTheme"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
+
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#DDDDDD"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Font size selection -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_font_size"
+                android:textStyle="bold"
+                android:textSize="15sp"
+                android:paddingBottom="8dp" />
+
+            <RadioGroup
+                android:id="@+id/rgFontSize"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <RadioButton
+                    android:id="@+id/rbFontSmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_font_small" />
+
+                <RadioButton
+                    android:id="@+id/rbFontNormal"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_font_normal" />
+
+                <RadioButton
+                    android:id="@+id/rbFontMedium"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_font_medium" />
+
+                <RadioButton
+                    android:id="@+id/rbFontLarge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_font_large" />
+            </RadioGroup>
+
+        </LinearLayout>
+    </ScrollView>
 </LinearLayout>
