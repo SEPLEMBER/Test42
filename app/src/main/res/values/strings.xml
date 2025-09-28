@@ -49,7 +49,9 @@
 
     <string name="settings_syntax_on">Syntax highlighting enabled</string>
     <string name="settings_syntax_off">Syntax highlighting disabled</string>
-
+    <string name="settings_amber_mode">Amber</string>
+    <string name="settings_language">Language</string>
+    
     <!-- select all -->
     <string name="menu_select_all">All</string>
 
