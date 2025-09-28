@@ -27,4 +27,8 @@
 <string name="settings_undo_on">Undo enabled</string>
 <string name="settings_undo_off">Undo disabled</string>
 <string name="settings_theme_changed">Theme changed</string>
+    <string name="menu_quick">Quick</string>
+<string name="menu_clear">Clear</string>
+<string name="menu_about">About</string>
+
 </resources>
