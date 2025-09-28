@@ -17,7 +17,6 @@ import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.doOnNextLayout
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -43,6 +42,9 @@ class EditorActivity : AppCompatActivity() {
     private var lastQuery: String? = null
     private var matches: List<IntRange> = emptyList()
     private var currentMatchIdx: Int = -1
+
+    // last stats string to avoid redundant UI updates
+    private var lastStatsText: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -70,7 +72,7 @@ class EditorActivity : AppCompatActivity() {
 
         // initial hint visibility, word/char count
         binding.emptyHint.visibility = if (binding.editor.text.isNullOrEmpty()) View.VISIBLE else View.GONE
-        updateStats()
+        updateStatsAsync()
 
         // text watcher: update hint and stats and clear matches on change
         binding.editor.addTextChangedListener(object : TextWatcher {
@@ -78,7 +80,8 @@ class EditorActivity : AppCompatActivity() {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
                 binding.emptyHint.visibility = if (s.isNullOrEmpty()) View.VISIBLE else View.GONE
-                updateStats()
+                // update stats off the main thread
+                updateStatsAsync()
                 // Invalidate previous matches (we'll recompute when user searches again)
                 matches = emptyList()
                 currentMatchIdx = -1
@@ -175,6 +178,7 @@ class EditorActivity : AppCompatActivity() {
                 // set text on main thread
                 binding.editor.setText(content, TextView.BufferType.EDITABLE)
                 binding.editor.setSelection(0)
+                updateStatsAsync()
                 Toast.makeText(this@EditorActivity, "File opened", Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -317,7 +321,7 @@ class EditorActivity : AppCompatActivity() {
                     matches = emptyList()
                     currentMatchIdx = -1
                     tvCount.text = "0 matches"
-                    updateStats()
+                    updateStatsAsync()
                     Toast.makeText(this@EditorActivity, "Replaced all", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -354,34 +358,64 @@ class EditorActivity : AppCompatActivity() {
     private fun setupScrollThumb() {
         // map touch y to editor scroll
         binding.scrollThumb.setOnTouchListener { v, event ->
-            if (event.action == MotionEvent.ACTION_DOWN || event.action == MotionEvent.ACTION_MOVE) {
-                val h = v.height.toFloat()
-                val y = event.y.coerceAtMost(h).coerceAtLeast(0f)
-                binding.editor.doOnNextLayout {
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
+                    val h = v.height.toFloat().coerceAtLeast(1f)
+                    val y = event.y.coerceIn(0f, h)
                     val layout = binding.editor.layout
                     if (layout != null) {
+                        // layout exists -> compute immediately
                         val contentHeight = layout.height
                         val viewHeight = binding.editor.height
                         val maxScroll = (contentHeight - viewHeight).coerceAtLeast(0)
                         val proportion = (y / h).coerceIn(0f, 1f)
                         val scrollY = (proportion * maxScroll).toInt()
                         binding.editor.scrollTo(0, scrollY)
+                    } else {
+                        // layout not ready yet -> post and compute later
+                        binding.editor.post {
+                            val layout2 = binding.editor.layout ?: return@post
+                            val contentHeight = layout2.height
+                            val viewHeight = binding.editor.height
+                            val maxScroll = (contentHeight - viewHeight).coerceAtLeast(0)
+                            val proportion = (y / h).coerceIn(0f, 1f)
+                            val scrollY = (proportion * maxScroll).toInt()
+                            binding.editor.scrollTo(0, scrollY)
+                        }
                     }
+                    true
                 }
-                true
-            } else {
-                // consume event
-                true
+                else -> true
             }
         }
     }
 
     // ---------- UTILS ----------
-    private fun updateStats() {
-        val text = binding.editor.text?.toString() ?: ""
-        val chars = text.length
-        val words = if (text.isBlank()) 0 else text.trim().split(Regex("\\s+")).size
-        binding.tvStats.text = "Words: $words | Chars: $chars"
+    private fun updateStatsAsync() {
+        val currentText = binding.editor.text?.toString() ?: ""
+        lifecycleScope.launch(Dispatchers.Default) {
+            val chars = currentText.length
+            // fast iterative word count (avoids regex overhead)
+            var words = 0
+            var inWord = false
+            for (c in currentText) {
+                if (!c.isWhitespace()) {
+                    if (!inWord) {
+                        words++
+                        inWord = true
+                    }
+                } else {
+                    inWord = false
+                }
+            }
+            val stats = "Words: $words | Chars: $chars"
+            if (stats != lastStatsText) {
+                lastStatsText = stats
+                withContext(Dispatchers.Main) {
+                    binding.tvStats.text = stats
+                }
+            }
+        }
     }
 
     private fun copyToClipboard(text: String) {
