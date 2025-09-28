@@ -1,4 +1,4 @@
-package org.syndes.terminal
+package org.syndes.rust
 
 import android.util.Base64
 import java.nio.charset.StandardCharsets
