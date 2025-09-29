@@ -26,7 +26,7 @@ class MainActivity : AppCompatActivity() {
 
         // Запуск перехода через 2 секунды
         Handler(Looper.getMainLooper()).postDelayed({
-            startActivity(Intent(this, AboutActivity::class.java))
+            startActivity(Intent(this, EditorActivity::class.java))
             finish()
         }, 2000)
     }
