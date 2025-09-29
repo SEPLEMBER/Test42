@@ -30,6 +30,23 @@ class SettingsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // prefs early so we can ensure default and apply theme before inflating layout
+        val sp = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+
+        // Ensure dark pref exists and default to true (only set if missing)
+        if (!sp.contains(PREF_THEME_DARK)) {
+            sp.edit().putBoolean(PREF_THEME_DARK, true).apply()
+        }
+
+        // Apply theme according to preference (prevents flicker)
+        AppCompatDelegate.setDefaultNightMode(
+            if (sp.getBoolean(PREF_THEME_DARK, true))
+                AppCompatDelegate.MODE_NIGHT_YES
+            else
+                AppCompatDelegate.MODE_NIGHT_NO
+        )
+
         setContentView(R.layout.activity_settings)
 
         val toolbar = findViewById<Toolbar>(R.id.toolbar_settings)
@@ -37,14 +54,15 @@ class SettingsActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.title = getString(R.string.settings_title)
 
-        val sp = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        // Note: sp already defined above
+        // val sp = getSharedPreferences(prefsName, Context.MODE_PRIVATE) -- moved earlier
 
         val swPrevent = findViewById<Switch?>(R.id.swPreventScreenshots)
         val swUndo = findViewById<Switch?>(R.id.swUndoEnabled)
-        val swDark = findViewById<Switch?>(R.id.swDarkTheme)
+        // swDark removed (hidden from UI)
+        // swFormat removed (hidden from UI)
 
-        // NEW switches (null-safe)
-        val swFormat = findViewById<Switch?>(R.id.swFormatOn)
+        // NEW switches (remaining)
         val swRetro = findViewById<Switch?>(R.id.swRetroMode)
         val swSyntax = findViewById<Switch?>(R.id.swSyntaxHighlight)
         val swAmber = findViewById<Switch?>(R.id.swAmberMode)
@@ -75,9 +93,9 @@ class SettingsActivity : AppCompatActivity() {
         // initialize states (null-safe)
         swPrevent?.isChecked = sp.getBoolean(PREF_PREVENT_SCREENSHOT, false)
         swUndo?.isChecked = sp.getBoolean(PREF_UNDO_ENABLED, true)
-        swDark?.isChecked = sp.getBoolean(PREF_THEME_DARK, true)
+        // swDark removed: we don't show toggle
 
-        swFormat?.isChecked = sp.getBoolean(PREF_FORMAT_ON, false)
+        // swFormat removed: we don't show toggle
         swRetro?.isChecked = sp.getBoolean(PREF_RETRO_MODE, false)
         swSyntax?.isChecked = sp.getBoolean(PREF_SYNTAX_HIGHLIGHT, false)
         swAmber?.isChecked = sp.getBoolean(PREF_AMBER_MODE, false)
@@ -129,20 +147,7 @@ class SettingsActivity : AppCompatActivity() {
             Toast.makeText(this, if (checked) getString(R.string.settings_undo_on) else getString(R.string.settings_undo_off), Toast.LENGTH_SHORT).show()
         }
 
-        // listener: Theme toggle (applies immediately across app)
-        swDark?.setOnCheckedChangeListener { _: CompoundButton, checked: Boolean ->
-            sp.edit().putBoolean(PREF_THEME_DARK, checked).apply()
-            AppCompatDelegate.setDefaultNightMode(if (checked) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO)
-            recreate()
-            Toast.makeText(this, getString(R.string.settings_theme_changed), Toast.LENGTH_SHORT).show()
-        }
-
-        // NEW listeners: format / retro / syntax / amber
-        swFormat?.setOnCheckedChangeListener { _: CompoundButton, checked: Boolean ->
-            sp.edit().putBoolean(PREF_FORMAT_ON, checked).apply()
-            Toast.makeText(this, if (checked) getString(R.string.settings_format_on) else getString(R.string.settings_format_off), Toast.LENGTH_SHORT).show()
-        }
-
+        // NEW listeners: retro / syntax / amber
         swRetro?.setOnCheckedChangeListener { _: CompoundButton, checked: Boolean ->
             sp.edit().putBoolean(PREF_RETRO_MODE, checked).apply()
             Toast.makeText(this, if (checked) getString(R.string.settings_retro_on) else getString(R.string.settings_retro_off), Toast.LENGTH_SHORT).show()
@@ -155,7 +160,6 @@ class SettingsActivity : AppCompatActivity() {
 
         swAmber?.setOnCheckedChangeListener { _: CompoundButton, checked: Boolean ->
             sp.edit().putBoolean(PREF_AMBER_MODE, checked).apply()
-            // use plain text to avoid missing string-resource crashes
             Toast.makeText(this, if (checked) "Amber mode enabled" else "Amber mode disabled", Toast.LENGTH_SHORT).show()
         }
 
@@ -192,7 +196,6 @@ class SettingsActivity : AppCompatActivity() {
                 else -> "kotlin"
             }
             sp.edit().putString(PREF_SYNTAX_LANGUAGE, langValue).apply()
-            // keep Toast simple to avoid format/resource pitfalls
             Toast.makeText(this, "Language set to $langValue", Toast.LENGTH_SHORT).show()
         }
     }
