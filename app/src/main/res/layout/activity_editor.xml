@@ -30,7 +30,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:padding="8dp"
-            android:text="Words: 0 | Chars: 0"
+            android:text="@string/stats_default"
             android:textColor="#BDBDBD"
             android:textSize="13sp" />
 
@@ -56,14 +56,14 @@
                 android:padding="8dp"
                 android:lineSpacingExtra="2dp"
                 android:importantForAutofill="no"
-                android:hint="Start typing..." />
+                android:hint="@string/editor_hint" />
 
             <!-- Empty hint -->
             <TextView
                 android:id="@+id/emptyHint"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Empty document — use File → Open/Save"
+                android:text="@string/empty_hint"
                 android:textColor="#9E9E9E"
                 android:alpha="0.9"
                 android:layout_gravity="center"
@@ -79,7 +79,7 @@
         android:layout_marginTop="?attr/actionBarSize"
         android:layout_gravity="top|end"
         android:background="@android:color/transparent"
-        android:contentDescription="Jump to top"
+        android:contentDescription="@string/jump_top"
         android:clickable="true"
         android:focusable="true" />
 
@@ -90,7 +90,7 @@
         android:layout_gravity="bottom|end"
         android:layout_marginBottom="8dp"
         android:background="@android:color/transparent"
-        android:contentDescription="Jump to bottom"
+        android:contentDescription="@string/jump_bottom"
         android:clickable="true"
         android:focusable="true" />
 
