@@ -4,28 +4,38 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="16dp"
+    android:background="#CC212121"     <!-- полупрозрачный тёмный фон -->
+    android:clipToPadding="false">
 
     <EditText
         android:id="@+id/etFind"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="@string/find_hint"
-        android:inputType="text" />
+        android:inputType="text"
+        android:textColor="#FFFFFF"                <!-- белый текст -->
+        android:textColorHint="#BDBDBD"            <!-- светло-серый hint -->
+        android:backgroundTint="#444444" />
 
     <EditText
         android:id="@+id/etReplace"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="@string/replace_hint"
-        android:inputType="text" />
+        android:inputType="text"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#BDBDBD"
+        android:backgroundTint="#444444"
+        android:layout_marginTop="8dp" />
 
     <TextView
         android:id="@+id/tvMatchesCount"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/matches_count"
-        android:paddingTop="8dp" />
+        android:paddingTop="8dp"
+        android:textColor="#E0E0E0" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -38,24 +48,40 @@
             android:id="@+id/btnPrev"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="&lt;" />
+            android:text="&lt;"
+            android:textColor="#FFFFFF" />
 
         <Button
             android:id="@+id/btnNext"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="&gt;" />
+            android:text="&gt;"
+            android:textColor="#FFFFFF"
+            android:layout_marginStart="8dp" />
 
         <Button
             android:id="@+id/btnReplaceOne"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="R1" />
+            android:text="R1"
+            android:layout_marginStart="8dp"
+            android:textColor="#FFFFFF" />
 
         <Button
             android:id="@+id/btnReplaceAll"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="RALL" />
+            android:text="RALL"
+            android:layout_marginStart="8dp"
+            android:textColor="#FFFFFF" />
     </LinearLayout>
+
+    <!-- Minimize to overlay -->
+    <Button
+        android:id="@+id/btnMinimize"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="Minimize to quick controls"
+        android:textColor="#FFFFFF" />
 </LinearLayout>
