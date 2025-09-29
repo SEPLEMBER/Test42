@@ -566,6 +566,7 @@ class EditorActivity : AppCompatActivity() {
         })
 
         dialog.show()
+   dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
         val initialQuery = etFind.text.toString()
         if (initialQuery.isNotEmpty()) computeMatchesAndUpdate(initialQuery)
     }
