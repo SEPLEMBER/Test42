@@ -1,0 +1,66 @@
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0A0A0A"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Секция: Туториал -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📖 Туториал"
+            android:textColor="#FFFFFF"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:paddingBottom="8dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Здесь краткое описание приложения и как им пользоваться..."
+            android:textColor="#CCCCCC"
+            android:textSize="16sp"
+            android:paddingBottom="24dp" />
+
+        <!-- Секция: Разработчики -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="👨‍💻 Разработчики"
+            android:textColor="#FFFFFF"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:paddingBottom="8dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Приложение создано студентами/волонтерами. Контакты: example@email.com"
+            android:textColor="#CCCCCC"
+            android:textSize="16sp"
+            android:paddingBottom="24dp" />
+
+        <!-- Секция: Лицензия -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📜 Лицензия"
+            android:textColor="#FFFFFF"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:paddingBottom="8dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Это некоммерческое приложение. Лицензия: MIT. Версия: 1.0"
+            android:textColor="#CCCCCC"
+            android:textSize="16sp"
+            android:paddingBottom="24dp" />
+    </LinearLayout>
+</ScrollView>
