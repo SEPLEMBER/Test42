@@ -1,43 +1,40 @@
 <resources>
-    <!-- Название приложения -->
     <string name="app_name">Rust</string>
 
-<string name="menu_file">File</string>
-<string name="menu_open">Open</string>
-<string name="menu_save">Save</string>
-<string name="menu_save_as">Save As</string>
-<string name="menu_edit">Edit</string>
-<string name="menu_copy">Copy</string>
-<string name="menu_paste">Paste</string>
-<string name="menu_find">Find</string>
-<string name="menu_undo">Undo</string>
-<string name="menu_redo">Redo</string>
-<string name="menu_encrypt">Encrypt</string>
-<string name="menu_decrypt">Decrypt</string>
-<string name="menu_settings">Settings</string>
+    <string name="menu_file">File</string>
+    <string name="menu_open">Open</string>
+    <string name="menu_save">Save</string>
+    <string name="menu_save_as">Save As</string>
+    <string name="menu_edit">Edit</string>
+    <string name="menu_copy">Copy</string>
+    <string name="menu_paste">Paste</string>
+    <string name="menu_find">Find</string>
+    <string name="menu_undo">Undo</string>
+    <string name="menu_redo">Redo</string>
+    <string name="menu_encrypt">Encrypt</string>
+    <string name="menu_decrypt">Decrypt</string>
+    <string name="menu_settings">Settings</string>
 
-<string name="settings_title">Settings</string>
-<string name="settings_prevent_screenshots">Prevent screenshots</string>
-<string name="settings_undo_enabled">Enable undo/redo</string>
-<string name="settings_dark_theme">Dark theme</string>
-<string name="settings_screenshots_protected">Screenshots are now prevented</string>
-<string name="settings_screenshots_allowed">Screenshots allowed</string>
-<string name="settings_undo_on">Undo enabled</string>
-<string name="settings_undo_off">Undo disabled</string>
-<string name="settings_theme_changed">Theme changed</string>
-<string name="settings_font_size">Font size</string>
-<string name="settings_font_small">Small</string>
-<string name="settings_font_normal">Normal</string>
-<string name="settings_font_medium">Medium</string>
-<string name="settings_font_large">Large</string>
-<string name="settings_font_changed">Font size saved: %1$s</string>
-        <!-- Settings new labels -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_prevent_screenshots">Prevent screenshots</string>
+    <string name="settings_undo_enabled">Enable undo/redo</string>
+    <string name="settings_dark_theme">Dark theme</string>
+    <string name="settings_screenshots_protected">Screenshots are now prevented</string>
+    <string name="settings_screenshots_allowed">Screenshots allowed</string>
+    <string name="settings_undo_on">Undo enabled</string>
+    <string name="settings_undo_off">Undo disabled</string>
+    <string name="settings_theme_changed">Theme changed</string>
+    <string name="settings_font_size">Font size</string>
+    <string name="settings_font_small">Small</string>
+    <string name="settings_font_normal">Normal</string>
+    <string name="settings_font_medium">Medium</string>
+    <string name="settings_font_large">Large</string>
+    <string name="settings_font_changed">Font size saved: %1$s</string>
     <string name="settings_formatting_support">Formatting support</string>
     <string name="settings_line_numbers">Show line numbers</string>
     <string name="settings_retro_mode">Retro mode (green text)</string>
     <string name="settings_syntax_highlight">Syntax highlighting</string>
 
-    <!-- toggles feedback -->
     <string name="settings_format_on">Formatting enabled</string>
     <string name="settings_format_off">Formatting disabled</string>
 
@@ -52,23 +49,45 @@
     <string name="settings_amber_mode">Amber</string>
     <string name="settings_language">Language</string>
 
-        <string name="settings_amber_on">Amber theme enabled</string>
+    <string name="settings_amber_on">Amber theme enabled</string>
     <string name="settings_amber_off">Amber theme disabled</string>
 
-    <!-- Настройки языка -->
     <string name="settings_language_changed">Programming language changed %s</string>
     
-    <!-- select all -->
     <string name="menu_select_all">All</string>
 
-    <!-- find dialog -->
     <string name="find_hint">Find (use :123 to jump to line 123)</string>
     <string name="replace_hint">Replace with</string>
     <string name="matches_count">Matches: 0</string>
     
     <string name="menu_quick">Quick</string>
-<string name="menu_clear">Clear</string>
-<string name="menu_about">About</string>
-<string name="textRust">Rust</string>
+    <string name="menu_clear">Clear</string>
+    <string name="menu_about">About</string>
+    <string name="textRust">Rust</string>
 
+    <string name="section_tutorial_title">📖 Instructions and Tips</string>
+    <string name="section_tutorial_text">1. Fast scrolling is supported: Swipe right to left and up/down. Quick navigation to the start or end of the file is available by tapping the top or bottom right corners.
+
+2. Fast copying is supported: Long press anywhere + "ALL" button. Quick text deletion is also available: "ALL" + "DELETE" (on the keyboard).
+
+3. Editing very large files can be resource-intensive depending on the device. However, for most scenarios (up to 100,000 characters or more), no issues typically arise.
+
+4. After changing syntax highlighting settings, it is recommended to restart the application.
+
+5. Data protection is implemented based on the AES algorithm in GCM mode with HMAC-SHA256 and PBKDF2 (75,000 iterations). Using a random and sufficiently complex password ensures a high level of protection. Important: A weak password negates all cryptographic measures, so for corporate or sensitive data, use strong passwords, preferably generated and stored in a password manager.
+
+6. This editor is part of the Syndes ecosystem. Use for work tasks is permitted and not restricted by the license. The project is free and distributed with open source.
+
+7. Disclaimer: The developers are not responsible for any consequences of using the editor. We strive to provide the most reliable software, but 100% stability cannot be guaranteed. Regular file backups significantly reduce the risk of data loss.</string>
+
+    <string name="section_developers_title">👨‍💻 Developers</string>
+    <string name="section_developers_text">
+Syndes Project, September 2025. An open-source project created by volunteers and available to the community.
+    </string>
+
+    <string name="section_license_title">📜 License</string>
+    <string name="section_license_text">
+This non-commercial application is distributed under the Apache License 2.0.  
+Use, modification, and forking are permitted. Please retain attribution to the original project: "Based on the Rust editor by Syndes Project" at least in the "About" section.  
+See the full license text in the LICENSE file.</string>
 </resources>
