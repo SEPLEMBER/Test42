@@ -1,4 +1,4 @@
-package com.example.simpleapp
+package org.syndes.rust
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
