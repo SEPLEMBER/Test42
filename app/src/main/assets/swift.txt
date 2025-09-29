@@ -168,7 +168,6 @@ MutableCollection=#FF69B4
 RandomAccessCollection=#FF69B4
 BidirectionalCollection=#FF69B4
 package=#00FF00
-//=#FF4500
 1=#FF4500
 2=#FF4500
 3=#FF4500
