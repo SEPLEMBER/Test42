@@ -189,7 +189,6 @@ putString=#00FF00
 startActivity=#00FF00
 finish=#00FF00
 package=#00FF00
-//=#FF4500
 1=#FF4500
 2=#FF4500
 3=#FF4500
