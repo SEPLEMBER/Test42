@@ -64,6 +64,11 @@
     <string name="menu_clear">Clear</string>
     <string name="menu_about">About</string>
     <string name="textRust">Rust</string>
+    <string name="stats_default">Words: 0 | Chars: 0</string>
+    <string name="editor_hint">Start typing...</string>
+    <string name="empty_hint">Empty document — use File → Open/Save</string>
+    <string name="jump_top">Jump to top</string>
+    <string name="jump_bottom">Jump to bottom</string>
 
     <string name="section_tutorial_title">📖 Instructions and Tips</string>
     <string name="section_tutorial_text">1. Fast scrolling is supported: Swipe right to left and up/down. Quick navigation to the start or end of the file is available by tapping the top or bottom right corners.
