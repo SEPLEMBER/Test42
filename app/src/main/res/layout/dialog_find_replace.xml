@@ -8,34 +8,43 @@
     android:background="@drawable/dialog_bg"
     android:clipToPadding="false">
 
+    <!-- Поле поиска -->
     <EditText
         android:id="@+id/etFind"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="@string/find_hint"
         android:inputType="text"
-        android:background="@android:drawable/edit_text"
+        android:background="@drawable/edit_bg_dark"
+        android:textColor="#E0E0E0"
+        android:textColorHint="#9E9E9E"
         android:padding="8dp"
         android:layout_marginBottom="8dp"/>
 
+    <!-- Поле замены -->
     <EditText
         android:id="@+id/etReplace"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="@string/replace_hint"
         android:inputType="text"
-        android:background="@android:drawable/edit_text"
+        android:background="@drawable/edit_bg_dark"
+        android:textColor="#E0E0E0"
+        android:textColorHint="#9E9E9E"
         android:padding="8dp"
         android:layout_marginBottom="8dp"/>
 
+    <!-- Счётчик совпадений -->
     <TextView
         android:id="@+id/tvMatchesCount"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/matches_count"
+        android:textColor="#CCCCCC"
         android:paddingTop="4dp"
         android:paddingBottom="8dp" />
 
+    <!-- Кнопки управления -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
