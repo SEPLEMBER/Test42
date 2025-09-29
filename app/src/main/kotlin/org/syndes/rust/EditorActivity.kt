@@ -1199,7 +1199,6 @@ class EditorActivity : AppCompatActivity() {
             delay(400)
         }
     }
-}
 
         lifecycleScope.launch(bgDispatcher) {
             try {
