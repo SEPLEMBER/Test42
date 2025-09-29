@@ -2,36 +2,32 @@ package org.syndes.rust
 
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
+import android.os.Handler
+import android.os.Looper
+import android.view.animation.AlphaAnimation
+import android.view.animation.Animation
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import org.syndes.rust.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var binding: ActivityMainBinding
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        setContentView(R.layout.activity_main)
 
-        // Editor -> запускает EditorActivity
-        binding.btnEditor.setOnClickListener {
-            val intent = Intent(this, EditorActivity::class.java)
-            startActivity(intent)
-        }
+        val textRust = findViewById<TextView>(R.id.textRust)
 
-        // Заглушки для других кнопок
-        val placeholderToast = { msg: String ->
-            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
-        }
+        // Лёгкая анимация (появление)
+        val fadeIn = AlphaAnimation(0f, 1f)
+        fadeIn.duration = 1500
+        fadeIn.repeatCount = Animation.INFINITE
+        fadeIn.repeatMode = Animation.REVERSE
+        textRust.startAnimation(fadeIn)
 
-        binding.btnPlaceholder1.setOnClickListener {
-            placeholderToast("Placeholder 1: Not implemented yet")
-        }
-
-        binding.btnPlaceholder2.setOnClickListener {
-            placeholderToast("Placeholder 2: Not implemented yet")
-        }
+        // Запуск перехода через 2 секунды
+        Handler(Looper.getMainLooper()).postDelayed({
+            startActivity(Intent(this, AboutActivity::class.java))
+            finish()
+        }, 2000)
     }
 }
