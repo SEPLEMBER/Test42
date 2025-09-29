@@ -230,4 +230,8 @@ get=#FFFF00
 String=#FFFF00
 Exception=FFFF00
 R.string.=#FFFF00
-
+templates=#FF4500
+Map=#FF4500
+keywordResponses=#FF4500
+safe=#FF4500
+Get=#FF4500
