@@ -5,7 +5,7 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="16dp"
-    android:background="#CC212121"     <!-- полупрозрачный тёмный фон -->
+    android:background="#CC212121"
     android:clipToPadding="false">
 
     <EditText
@@ -14,8 +14,8 @@
         android:layout_height="wrap_content"
         android:hint="@string/find_hint"
         android:inputType="text"
-        android:textColor="#FFFFFF"                <!-- белый текст -->
-        android:textColorHint="#BDBDBD"            <!-- светло-серый hint -->
+        android:textColor="#FFFFFF"
+        android:textColorHint="#BDBDBD"
         android:backgroundTint="#444444" />
 
     <EditText
