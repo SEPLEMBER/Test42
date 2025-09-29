@@ -53,7 +53,7 @@
     <string name="settings_amber_on">Amber theme enabled</string>
     <string name="settings_amber_off">Amber theme disabled</string>
 
-    <string name="settings_language_changed">Programming language changed %1$s</string>
+    <string name="settings_language_changed">Programming language changed %s</string>
 
     <string name="menu_select_all">All</string>
 
