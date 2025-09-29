@@ -70,29 +70,6 @@
                     android:layout_height="wrap_content" />
             </LinearLayout>
 
-            <!-- Theme: Dark toggle -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:paddingTop="8dp"
-                android:paddingBottom="8dp">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/settings_dark_theme"
-                    android:textSize="16sp"
-                    android:textColor="#E0E0E0" />
-
-                <Switch
-                    android:id="@+id/swDarkTheme"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
-            </LinearLayout>
-
             <!-- NEW: Amber theme toggle -->
             <LinearLayout
                 android:layout_width="match_parent"
@@ -112,29 +89,6 @@
 
                 <Switch
                     android:id="@+id/swAmberMode"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
-            </LinearLayout>
-
-            <!-- NEW: Formatting support -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:paddingTop="8dp"
-                android:paddingBottom="8dp">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/settings_formatting_support"
-                    android:textSize="16sp"
-                    android:textColor="#E0E0E0" />
-
-                <Switch
-                    android:id="@+id/swFormatOn"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content" />
             </LinearLayout>
