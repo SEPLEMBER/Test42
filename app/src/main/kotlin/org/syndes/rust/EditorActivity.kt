@@ -460,7 +460,7 @@ class EditorActivity : AppCompatActivity() {
         if (!lastQuery.isNullOrEmpty()) etFind.setText(lastQuery)
 
         val dialog = AlertDialog.Builder(this)
-            .setTitle("Find / Replace")
+            .setTitle(getString(R.string.dialog_find_replace_title))
             .setView(view)
             .setNegativeButton("Close", null)
             .create()
@@ -1129,20 +1129,24 @@ class EditorActivity : AppCompatActivity() {
         val plain = binding.editor.text?.toString() ?: ""
         if (plain.isEmpty()) { Toast.makeText(this, "Nothing to encrypt", Toast.LENGTH_SHORT).show(); return }
         val waitDlg = AlertDialog.Builder(this)
-            .setTitle("Encrypting")
-            .setMessage("Please wait")
+            .setTitle(getString(R.string.dialog_encrypting_title))
+            .setMessage(getString(R.string.dialog_encrypting_message))
             .setCancelable(false)
             .create()
         waitDlg.show()
 
         val dotsJob = lifecycleScope.launch {
-            var dots = 0
-            while (isActive) {
-                withContext(Dispatchers.Main) { waitDlg.setMessage("Please wait" + ".".repeat(dots)) }
-                dots = (dots + 1) % 4
-                delay(400)
-            }
+    var dots = 0
+    while (isActive) {
+        withContext(Dispatchers.Main) {
+            waitDlg.setMessage(
+                getString(R.string.dialog_encrypting_message) + ".".repeat(dots)
+            )
         }
+        dots = (dots + 1) % 4
+        delay(400)
+    }
+}
 
         lifecycleScope.launch(bgDispatcher) {
             try {
@@ -1154,7 +1158,7 @@ class EditorActivity : AppCompatActivity() {
                     ignoreTextWatcher = false
                     scheduleStatsUpdate()
                     pushHistorySnapshot(encrypted)
-                    Toast.makeText(this@EditorActivity, "Encryption done", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@EditorActivity, getString(R.string.toast_encrypt_done),  Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) { Toast.makeText(this@EditorActivity, "Encryption failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show() }
@@ -1166,23 +1170,36 @@ class EditorActivity : AppCompatActivity() {
     }
 
     private fun performDecrypt(password: CharArray) {
-        val encrypted = binding.editor.text?.toString() ?: ""
-        if (encrypted.isEmpty()) { Toast.makeText(this, "Nothing to decrypt", Toast.LENGTH_SHORT).show(); return }
-        val waitDlg = AlertDialog.Builder(this)
-            .setTitle("Decrypting")
-            .setMessage("Please wait")
-            .setCancelable(false)
-            .create()
-        waitDlg.show()
+    val encrypted = binding.editor.text?.toString() ?: ""
+    if (encrypted.isEmpty()) {
+        Toast.makeText(
+            this,
+            getString(R.string.toast_nothing_to_decrypt),
+            Toast.LENGTH_SHORT
+        ).show()
+        return
+    }
 
-        val dotsJob = lifecycleScope.launch {
-            var dots = 0
-            while (isActive) {
-                withContext(Dispatchers.Main) { waitDlg.setMessage("Please wait" + ".".repeat(dots)) }
-                dots = (dots + 1) % 4
-                delay(400)
+    val waitDlg = AlertDialog.Builder(this)
+        .setTitle(getString(R.string.dialog_decrypting_title))
+        .setMessage(getString(R.string.dialog_decrypting_message))
+        .setCancelable(false)
+        .create()
+    waitDlg.show()
+
+    val dotsJob = lifecycleScope.launch {
+        var dots = 0
+        while (isActive) {
+            withContext(Dispatchers.Main) {
+                waitDlg.setMessage(
+                    getString(R.string.dialog_decrypting_message) + ".".repeat(dots)
+                )
             }
+            dots = (dots + 1) % 4
+            delay(400)
         }
+    }
+}
 
         lifecycleScope.launch(bgDispatcher) {
             try {
@@ -1194,7 +1211,12 @@ class EditorActivity : AppCompatActivity() {
                     ignoreTextWatcher = false
                     scheduleStatsUpdate()
                     pushHistorySnapshot(plain)
-                    Toast.makeText(this@EditorActivity, "Decryption done", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                     this@EditorActivity,
+                     getString(R.string.toast_decrypt_done),
+                     Toast.LENGTH_SHORT
+                      ).show()
+
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) { Toast.makeText(this@EditorActivity, "Decryption failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show() }
