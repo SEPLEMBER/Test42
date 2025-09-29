@@ -226,3 +226,8 @@ bat=#FFFF00
 sh=#FFFF00
 ini=#FFFF00
 log=#FFFF00
+get=#FFFF00
+String=#FFFF00
+Exception=FFFF00
+R.string.=#FFFF00
+
