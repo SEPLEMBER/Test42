@@ -350,7 +350,7 @@ class EditorActivity : AppCompatActivity() {
             }
             R.id.action_about -> {
                 try {
-                    val intent = Intent(this, SettingsActivity::class.java)
+                    val intent = Intent(this, AboutActivity::class.java)
                     startActivity(intent)
                 } catch (e: Exception) {
                     showSettingsFallbackDialog()
