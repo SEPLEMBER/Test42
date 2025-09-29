@@ -37,6 +37,11 @@
             android:exported="false"
             android:theme="@style/AppTheme" />
 
+        <activity
+            android:name=".AboutActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme" />
+
     </application>
 
 </manifest>
