@@ -123,7 +123,6 @@ net=#00FFFF
 thread=#00FFFF
 sync=#00FFFF
 package=#00FF00
-//=#FF4500
 1=#FF4500
 2=#FF4500
 3=#FF4500
