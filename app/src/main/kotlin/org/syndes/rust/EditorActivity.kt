@@ -6,6 +6,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
+import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
@@ -21,9 +22,7 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewTreeObserver
-import android.view.WindowManager
 import android.widget.EditText
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -33,12 +32,13 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.*
 import org.syndes.rust.databinding.ActivityEditorBinding
 import java.io.BufferedReader
-import java.io.BufferedWriter
 import java.io.InputStreamReader
+import java.io.BufferedWriter
 import java.io.OutputStreamWriter
-import java.util.ArrayList
 import kotlin.math.max
 import kotlin.math.min
+import android.view.WindowManager
+import android.widget.TextView
 
 class EditorActivity : AppCompatActivity() {
 
@@ -62,7 +62,7 @@ class EditorActivity : AppCompatActivity() {
     private var statsJob: Job? = null
     private var lastStatsText: String = ""
 
-    // History (undo/redo)
+    // History (undo/redo) — switched to linear history with index
     private val history = ArrayList<String>()
     private var historyIndex = -1
     private var historyJob: Job? = null
@@ -74,35 +74,37 @@ class EditorActivity : AppCompatActivity() {
     private val PREF_PREVENT_SCREENSHOT = "prevent_screenshot"
     private val PREF_UNDO_ENABLED = "undo_enabled"
     private val PREF_THEME_DARK = "theme_dark"
-    private val PREF_FONT_SIZE = "font_size"
+    private val PREF_FONT_SIZE = "font_size" // values: small, normal, medium, large
 
-    // other prefs keys (kept from previous)
+    // new prefs
     private val PREF_FORMAT_ON = "format_on"
-    private val PREF_SHOW_LINE_NUMBERS = "show_line_numbers"
+    private val PREF_SHOW_LINE_NUMBERS = "show_line_numbers" // временно игнорируется
     private val PREF_RETRO_MODE = "retro_mode"
     private val PREF_SYNTAX_HIGHLIGHT = "syntax_highlight"
     private val PREF_SYNTAX_MAPPING_URI = "syntax_mapping_uri"
-    private val PREF_SYNTAX_LANGUAGE = "syntax_language"
+    private val PREF_SYNTAX_LANGUAGE = "syntax_language" // e.g. "kotlin"
     private val PREF_AMBER_MODE = "amber_mode"
 
-    // coroutine helper
+    // coroutine scope helper
     private val bgDispatcher = Dispatchers.Default
 
-    // highlighting and UI jobs
+    // highlight job / observer
     private var highlightJob: Job? = null
-    private var uiUpdateJob: Job? = null
     private var scrollObserverAttached = false
     private var onScrollListener: ViewTreeObserver.OnScrollChangedListener? = null
+    private var uiUpdateJob: Job? = null
 
-    // syntax helpers (kept)
+    // simple kotlin keywords fallback
     private val kotlinKeywords = setOf(
         "fun","val","var","if","else","for","while","return","import","class","object",
         "private","public","protected","internal","override","when","in","is","null","true","false"
     )
+
+    // loaded mapping from external .txt (token -> color int)
     private val syntaxMapping = mutableMapOf<String, Int>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // apply theme pref early
+        // apply theme preference early
         val sp = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
         val dark = sp.getBoolean(PREF_THEME_DARK, true)
         AppCompatDelegate.setDefaultNightMode(if (dark) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO)
@@ -114,10 +116,11 @@ class EditorActivity : AppCompatActivity() {
         setSupportActionBar(binding.toolbar)
         supportActionBar?.title = getString(R.string.app_name)
 
-        // make jump zones accept clicks
+        // Ensure jump zones accept clicks
         binding.jumpTop.isClickable = true
         binding.jumpTop.isFocusable = true
         binding.jumpTop.bringToFront()
+
         binding.jumpBottom.isClickable = true
         binding.jumpBottom.isFocusable = true
         binding.jumpBottom.bringToFront()
@@ -147,12 +150,13 @@ class EditorActivity : AppCompatActivity() {
             }
         }
 
-        // optional mapping loader (kept, may be unused)
+        // launcher to load syntax mapping file (user picks a .txt mapping via SAF)
         loadSyntaxMappingLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             uri?.let {
                 lifecycleScope.launch {
                     parseAndStoreSyntaxMappingFromUri(it)
                     Toast.makeText(this@EditorActivity, "Syntax mapping loaded", Toast.LENGTH_SHORT).show()
+                    // request a highlight update
                     scheduleHighlight()
                 }
             }
@@ -167,26 +171,33 @@ class EditorActivity : AppCompatActivity() {
         binding.emptyHint.visibility = if (binding.editor.text.isNullOrEmpty()) View.VISIBLE else View.GONE
         scheduleStatsUpdate()
 
-        // apply font size & visuals
+        // apply font size preference immediately
         applyFontSizeFromPrefs()
+
+        // apply retro / syntax visuals (this may load mapping from assets if configured)
         applyPrefsVisuals()
 
         // text watcher: update hint, stats (debounced), and history
         binding.editor.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) { /* no-op */ }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
+                // no-op — snapshots taken by debounce
+            }
+
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) { /* no-op */ }
+
             override fun afterTextChanged(s: Editable?) {
                 if (ignoreTextWatcher) return
                 binding.emptyHint.visibility = if (s.isNullOrEmpty()) View.VISIBLE else View.GONE
                 scheduleStatsUpdate()
-                scheduleHistorySnapshot()
+                scheduleHistorySnapshot() // debounced snapshot
                 matches = emptyList()
                 currentMatchIdx = -1
+                // update visible highlight & formatting only
                 scheduleHighlight()
             }
         })
 
-        // jump zones
+        // top-right / bottom-right invisible zones for jump-to-start/end
         binding.jumpTop.setOnClickListener {
             binding.editor.requestFocus()
             binding.editor.setSelection(0)
@@ -211,7 +222,7 @@ class EditorActivity : AppCompatActivity() {
         // attach scroll observer for highlight updates
         attachScrollObserver()
 
-        // quick edge scroll handling (right edge) — kept
+        // touch on right edge -> quick scroll (approximate)
         binding.root.setOnTouchListener { v, ev ->
             try {
                 val edgeWidthPx = dpToPx(56)
@@ -235,8 +246,7 @@ class EditorActivity : AppCompatActivity() {
             false
         }
 
-        // overlay buttons: hook listeners (initially overlay is gone)
-        setupOverlayControls()
+        // if activity launched with an initial file intent (optional), you might want to open it here
     }
 
     override fun onResume() {
@@ -269,6 +279,7 @@ class EditorActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_open -> {
+                // allow any file types — we'll try to read as UTF-8 text
                 openDocumentLauncher.launch(arrayOf("*/*"))
                 true
             }
@@ -320,10 +331,12 @@ class EditorActivity : AppCompatActivity() {
                 val tlen = binding.editor.text?.length ?: 0
                 if (tlen > 0) {
                     binding.editor.requestFocus()
+                    // simply select all — do not try to force-show the contextual menu
                     binding.editor.selectAll()
                 }
                 true
             }
+            // note: removed reference to R.id.action_load_syntax to avoid resource missing errors.
             R.id.action_encrypt -> { promptEncryptCurrent(); true }
             R.id.action_decrypt -> { promptDecryptCurrent(); true }
             R.id.action_settings -> {
@@ -353,6 +366,7 @@ class EditorActivity : AppCompatActivity() {
             .setTitle("Clear document")
             .setMessage("Are you sure you want to clear the entire document? This action can be undone (if Undo is enabled).")
             .setPositiveButton("Clear") { _, _ ->
+                // snapshot current state before clearing
                 pushHistorySnapshot(binding.editor.text?.toString() ?: "")
                 ignoreTextWatcher = true
                 binding.editor.setText("", TextView.BufferType.EDITABLE)
@@ -391,11 +405,13 @@ class EditorActivity : AppCompatActivity() {
                 }
 
                 currentDocumentUri = uri
+                // set text without triggering history snapshot
                 ignoreTextWatcher = true
                 binding.editor.setText(content, TextView.BufferType.EDITABLE)
                 binding.editor.setSelection(0)
                 ignoreTextWatcher = false
 
+                // reset history to the opened content
                 history.clear()
                 historyIndex = -1
                 pushHistorySnapshot(content)
@@ -429,18 +445,17 @@ class EditorActivity : AppCompatActivity() {
         }
     }
 
-    // ---------- FIND & REPLACE (full dialog) ----------
+    // ---------- FIND & REPLACE ----------
     private fun showFindReplaceDialog() {
         val inflater = LayoutInflater.from(this)
         val view = inflater.inflate(R.layout.dialog_find_replace, null)
         val etFind = view.findViewById<EditText>(R.id.etFind)
         val etReplace = view.findViewById<EditText>(R.id.etReplace)
-        val tvCount = view.findViewById<TextView>(R.id.tvMatchesCount)
+        val tvCount = view.findViewById<android.widget.TextView>(R.id.tvMatchesCount)
         val btnPrev = view.findViewById<View>(R.id.btnPrev)
         val btnNext = view.findViewById<View>(R.id.btnNext)
         val btnR1 = view.findViewById<View>(R.id.btnReplaceOne)
         val btnRAll = view.findViewById<View>(R.id.btnReplaceAll)
-        val btnMinimize = view.findViewById<View>(R.id.btnMinimize)
 
         if (!lastQuery.isNullOrEmpty()) etFind.setText(lastQuery)
 
@@ -450,16 +465,7 @@ class EditorActivity : AppCompatActivity() {
             .setNegativeButton("Close", null)
             .create()
 
-        // enable minimize only if there's a query
-        fun updateMinimizeState() {
-            val q = etFind.text?.toString() ?: ""
-            btnMinimize.isEnabled = q.isNotEmpty()
-        }
-
-        updateMinimizeState()
-
-        // select match (activity-level)
-        fun selectMatchAtLocal(index: Int) {
+        fun selectMatchAt(index: Int) {
             if (index < 0 || index >= matches.size) return
             val range = matches[index]
             binding.editor.requestFocus()
@@ -470,18 +476,20 @@ class EditorActivity : AppCompatActivity() {
             lastQuery = etFind.text.toString()
         }
 
-        // compute matches (activity-level helper)
-        fun computeMatchesAndUpdateLocal(query: String) {
-            // special "go to line" check
+        fun tryGoToLine(query: String): Boolean {
             if (query.startsWith(":")) {
-                val num = query.substring(1).toIntOrNull()
-                if (num != null) {
-                    goToLine(num)
-                    tvCount.text = "Go to line"
-                    return
-                }
+                val num = query.substring(1).toIntOrNull() ?: return false
+                goToLine(num)
+                return true
             }
+            return false
+        }
 
+        fun computeMatchesAndUpdate(query: String) {
+            if (tryGoToLine(query)) {
+                tvCount.text = "Go to line"
+                return
+            }
             lifecycleScope.launch(bgDispatcher) {
                 val text = binding.editor.text?.toString() ?: ""
                 if (query.isEmpty()) {
@@ -497,22 +505,21 @@ class EditorActivity : AppCompatActivity() {
                 withContext(Dispatchers.Main) {
                     tvCount.text = "${matches.size} matches"
                     if (currentMatchIdx >= 0 && matches.isNotEmpty()) {
-                        selectMatchAtLocal(currentMatchIdx)
+                        selectMatchAt(currentMatchIdx)
                     }
                 }
             }
         }
 
-        // next / prev
         btnNext.setOnClickListener {
             if (matches.isEmpty()) { Toast.makeText(this, "No matches", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
             currentMatchIdx = (currentMatchIdx + 1) % matches.size
-            selectMatchAtLocal(currentMatchIdx)
+            selectMatchAt(currentMatchIdx)
         }
         btnPrev.setOnClickListener {
             if (matches.isEmpty()) { Toast.makeText(this, "No matches", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
             currentMatchIdx = if (currentMatchIdx - 1 < 0) matches.size - 1 else currentMatchIdx - 1
-            selectMatchAtLocal(currentMatchIdx)
+            selectMatchAt(currentMatchIdx)
         }
 
         btnR1.setOnClickListener {
@@ -523,7 +530,8 @@ class EditorActivity : AppCompatActivity() {
             val range = matches[currentMatchIdx]
             val editable = binding.editor.text ?: return@setOnClickListener
             editable.replace(range.first, range.last + 1, r)
-            computeMatchesAndUpdateLocal(q)
+            computeMatchesAndUpdate(q)
+            // push snapshot after replace-one
             pushHistorySnapshot(binding.editor.text?.toString() ?: "")
         }
 
@@ -551,76 +559,15 @@ class EditorActivity : AppCompatActivity() {
             }
         }
 
-        // Minimize: compute matches (if needed), dismiss dialog and show overlay controls
-        btnMinimize.setOnClickListener {
-            val q = etFind.text?.toString() ?: ""
-            if (q.isEmpty()) {
-                Toast.makeText(this, "Enter query first", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            // compute matches and open overlay (overlay will update when compute finishes)
-            computeMatchesAndUpdateLocal(q)
-            // remember lastQuery
-            lastQuery = q
-            dialog.dismiss()
-            showOverlayControls()
-        }
-
-        // enable/disable minimize based on text
         etFind.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) { updateMinimizeState(); computeMatchesAndUpdateLocal(s?.toString() ?: "") }
+            override fun afterTextChanged(s: Editable?) { computeMatchesAndUpdate(s?.toString() ?: "") }
         })
 
         dialog.show()
-        // initial compute
         val initialQuery = etFind.text.toString()
-        if (initialQuery.isNotEmpty()) computeMatchesAndUpdateLocal(initialQuery)
-    }
-
-    // activity-level computeMatches used by minimize flow and overlay
-    private fun computeMatches(query: String, selectFirst: Boolean = true, onDone: (() -> Unit)? = null) {
-        if (query.startsWith(":")) {
-            // go to line command — handle on main thread
-            val num = query.substring(1).toIntOrNull()
-            if (num != null) {
-                goToLine(num)
-                onDone?.invoke()
-                return
-            }
-        }
-
-        lifecycleScope.launch(bgDispatcher) {
-            val text = binding.editor.text?.toString() ?: ""
-            if (query.isEmpty()) {
-                matches = emptyList()
-                currentMatchIdx = -1
-            } else {
-                val escaped = Regex.escape(query)
-                val regex = Regex(escaped, RegexOption.IGNORE_CASE)
-                val found = regex.findAll(text).map { it.range.first..it.range.last }.toList()
-                matches = found
-                currentMatchIdx = if (found.isNotEmpty() && selectFirst) 0 else if (found.isNotEmpty()) 0 else -1
-            }
-            withContext(Dispatchers.Main) {
-                updateOverlayCount(matches.size)
-                if (selectFirst && currentMatchIdx >= 0 && matches.isNotEmpty()) selectMatchAt(currentMatchIdx)
-                onDone?.invoke()
-            }
-        }
-    }
-
-    // select match activity-level
-    private fun selectMatchAt(index: Int) {
-        if (index < 0 || index >= matches.size) return
-        val range = matches[index]
-        binding.editor.requestFocus()
-        val safeStart = range.first.coerceIn(0, binding.editor.text?.length ?: 0)
-        val safeEnd = (range.last + 1).coerceIn(0, binding.editor.text?.length ?: 0)
-        binding.editor.setSelection(safeStart, safeEnd)
-        revealSelection(safeStart)
-        lastQuery = null // keep lastQuery only in dialog; we will set it when needed
+        if (initialQuery.isNotEmpty()) computeMatchesAndUpdate(initialQuery)
     }
 
     private fun goToLine(lineNumber: Int) {
@@ -661,48 +608,7 @@ class EditorActivity : AppCompatActivity() {
         }
     }
 
-    // ---------- overlay controls (center buttons) ----------
-    private fun setupOverlayControls() {
-        binding.overlayControls.visibility = View.GONE
-        binding.overlayPrev.setOnClickListener {
-            if (matches.isEmpty()) { Toast.makeText(this, "No matches", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
-            currentMatchIdx = if (currentMatchIdx - 1 < 0) matches.size - 1 else currentMatchIdx - 1
-            selectMatchAt(currentMatchIdx)
-            updateOverlayCount(matches.size)
-        }
-        binding.overlayNext.setOnClickListener {
-            if (matches.isEmpty()) { Toast.makeText(this, "No matches", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
-            currentMatchIdx = (currentMatchIdx + 1) % matches.size
-            selectMatchAt(currentMatchIdx)
-            updateOverlayCount(matches.size)
-        }
-        binding.overlayOpenFind.setOnClickListener {
-            // hide overlay and reopen full dialog
-            hideOverlayControls()
-            showFindReplaceDialog()
-        }
-        // tap outside overlay closes it: set click on container background (optional)
-        binding.overlayControls.setOnClickListener { /* consume click so it doesn't pass through */ }
-    }
-
-    private fun showOverlayControls() {
-        binding.overlayControls.visibility = View.VISIBLE
-        // set initial states
-        binding.overlayCount.text = if (matches.isEmpty()) "Searching..." else "${matches.size} matches"
-        // If matches not computed yet, kick off compute using lastQuery if available
-        val q = lastQuery ?: ""
-        if (q.isNotEmpty()) computeMatches(q, selectFirst = true)
-    }
-
-    private fun hideOverlayControls() {
-        binding.overlayControls.visibility = View.GONE
-    }
-
-    private fun updateOverlayCount(count: Int) {
-        binding.overlayCount.text = "$count matches"
-    }
-
-    // ---------- STATS ----------
+    // ---------- STATS (debounced) ----------
     private fun scheduleStatsUpdate(delayMs: Long = 300L) {
         statsJob?.cancel()
         statsJob = lifecycleScope.launch {
@@ -739,7 +645,7 @@ class EditorActivity : AppCompatActivity() {
 
     private fun updateStatsAsync() = scheduleStatsUpdate()
 
-    // ---------- FONT SIZE & PREF VISUALS (kept) ----------
+    // ---------- FONT SIZE ----------
     private fun applyFontSizeFromPrefs() {
         val sp = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
         val sizePref = sp.getString(PREF_FONT_SIZE, "normal") ?: "normal"
@@ -753,15 +659,17 @@ class EditorActivity : AppCompatActivity() {
         binding.editor.setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp)
     }
 
+    // ---------- PREF VISUALS (retro / amber / syntax) ----------
     private fun applyPrefsVisuals() {
         val sp = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
         val retro = sp.getBoolean(PREF_RETRO_MODE, false)
         val amber = sp.getBoolean(PREF_AMBER_MODE, false)
         val syntaxOn = sp.getBoolean(PREF_SYNTAX_HIGHLIGHT, false)
 
+        // amber takes precedence if enabled
         if (amber) {
             binding.editor.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
-            binding.editor.setTextColor(Color.parseColor("#FFBF00"))
+            binding.editor.setTextColor(Color.parseColor("#FFBF00")) // янтарный
         } else if (retro) {
             binding.editor.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
             binding.editor.setTextColor(Color.parseColor("#00FF66"))
@@ -770,26 +678,40 @@ class EditorActivity : AppCompatActivity() {
             binding.editor.setTextColor(getColorFromAttrOrDefault(android.R.attr.textColorPrimary, Color.parseColor("#E0E0E0")))
         }
 
+        // syntax highlight: if enabled but mapping not loaded -> try to load mapping from either persisted URI or assets (language)
         if (syntaxOn) {
             if (syntaxMapping.isEmpty()) {
+                // first try persisted URI
                 val mappingUriString = sp.getString(PREF_SYNTAX_MAPPING_URI, null)
                 if (!mappingUriString.isNullOrEmpty()) {
                     try {
                         val uri = Uri.parse(mappingUriString)
-                        lifecycleScope.launch { parseAndStoreSyntaxMappingFromUri(uri); scheduleHighlight() }
-                    } catch (_: Exception) { loadSyntaxMappingFromAssetsIfAvailable() }
-                } else loadSyntaxMappingFromAssetsIfAvailable()
-            } else scheduleHighlight()
+                        lifecycleScope.launch {
+                            parseAndStoreSyntaxMappingFromUri(uri)
+                            scheduleHighlight()
+                        }
+                    } catch (_: Exception) {
+                        // fallback to assets language file
+                        loadSyntaxMappingFromAssetsIfAvailable()
+                    }
+                } else {
+                    // fallback to assets language file
+                    loadSyntaxMappingFromAssetsIfAvailable()
+                }
+            } else {
+                scheduleHighlight()
+            }
         } else {
+            // clear any highlighting if syntax is off
             clearForegroundSpansInRange(0, binding.editor.text?.length ?: 0)
             clearFormattingSpansInRange(0, binding.editor.text?.length ?: 0)
         }
     }
 
-    // parse mapping from uri / assets (kept)...
     private fun loadSyntaxMappingFromAssetsIfAvailable() {
         val spref = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
         val lang = spref.getString(PREF_SYNTAX_LANGUAGE, "kotlin") ?: "kotlin"
+        // explicit safe interpolation
         val candidate1 = "${lang}.txt"
         val candidate2 = "${lang}lang.txt"
         lifecycleScope.launch {
@@ -804,12 +726,44 @@ class EditorActivity : AppCompatActivity() {
                     parseAndStoreSyntaxMappingFromAssets(found)
                     scheduleHighlight()
                 } else {
-                    try { parseAndStoreSyntaxMappingFromAssets(candidate1); scheduleHighlight() } catch (_: Exception) {}
+                    // if none found, try to open candidate1 directly (catch inside)
+                    try {
+                        parseAndStoreSyntaxMappingFromAssets(candidate1)
+                        scheduleHighlight()
+                    } catch (_: Exception) {
+                        // silently ignore - no asset mapping available
+                    }
                 }
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+                // ignore
+            }
         }
     }
 
+    private fun promptUserToPickSyntaxMapping() {
+        // launch SAF picker for text/* (user picks mapping .txt file)
+        // Fire this on UI thread
+        binding.root.post {
+            try {
+                loadSyntaxMappingLauncher.launch(arrayOf("text/*"))
+            } catch (_: Exception) {
+                Toast.makeText(this, "Unable to open file picker for syntax mapping", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun getColorFromAttrOrDefault(attr: Int, def: Int): Int {
+        return try {
+            val typed = obtainStyledAttributes(intArrayOf(attr))
+            val color = typed.getColor(0, def)
+            typed.recycle()
+            color
+        } catch (e: Exception) {
+            def
+        }
+    }
+
+    // Parse mapping file (format lines: token=#RRGGBB) and store mapping in memory + persist URI
     private suspend fun parseAndStoreSyntaxMappingFromUri(uri: Uri) {
         withContext(Dispatchers.IO) {
             try {
@@ -819,7 +773,8 @@ class EditorActivity : AppCompatActivity() {
                         br.forEachLine { raw ->
                             val line = raw.trim()
                             if (line.isEmpty()) return@forEachLine
-                            if (line.startsWith("#")) return@forEachLine
+                            if (line.startsWith("#")) return@forEachLine // comment
+                            // allow token= #RRGGBB or token=#RRGGBB (with/without spaces)
                             val parts = line.split("=").map { it.trim() }
                             if (parts.size >= 2) {
                                 val token = parts[0]
@@ -827,22 +782,30 @@ class EditorActivity : AppCompatActivity() {
                                 try {
                                     val color = Color.parseColor(colorStr)
                                     if (token.isNotEmpty()) map[token] = color
-                                } catch (_: Exception) {}
+                                } catch (_: Exception) {
+                                    // ignore invalid color
+                                }
                             }
                         }
+                        // swap into main map on UI thread
                         withContext(Dispatchers.Main) {
                             syntaxMapping.clear()
                             syntaxMapping.putAll(map)
+                            // persist uri so we can reload next time
                             getSharedPreferences(prefsName, Context.MODE_PRIVATE).edit().putString(PREF_SYNTAX_MAPPING_URI, uri.toString()).apply()
                         }
                     }
                 }
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) { Toast.makeText(this@EditorActivity, "Failed to read mapping file: ${e.localizedMessage}", Toast.LENGTH_LONG).show() }
+                // ignore parse errors but show toast
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@EditorActivity, "Failed to read mapping file: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                }
             }
         }
     }
 
+    // Parse mapping file from assets/<filename>
     private suspend fun parseAndStoreSyntaxMappingFromAssets(filename: String) {
         withContext(Dispatchers.IO) {
             try {
@@ -852,7 +815,7 @@ class EditorActivity : AppCompatActivity() {
                         br.forEachLine { raw ->
                             val line = raw.trim()
                             if (line.isEmpty()) return@forEachLine
-                            if (line.startsWith("#")) return@forEachLine
+                            if (line.startsWith("#")) return@forEachLine // comment
                             val parts = line.split("=").map { it.trim() }
                             if (parts.size >= 2) {
                                 val token = parts[0]
@@ -860,22 +823,27 @@ class EditorActivity : AppCompatActivity() {
                                 try {
                                     val color = Color.parseColor(colorStr)
                                     if (token.isNotEmpty()) map[token] = color
-                                } catch (_: Exception) {}
+                                } catch (_: Exception) {
+                                    // ignore invalid color
+                                }
                             }
                         }
                         withContext(Dispatchers.Main) {
                             syntaxMapping.clear()
                             syntaxMapping.putAll(map)
+                            // do not persist assets as URI; but store language pref (already done via settings)
                         }
                     }
                 }
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) { Toast.makeText(this@EditorActivity, "Failed to read mapping asset: ${e.localizedMessage}", Toast.LENGTH_LONG).show() }
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@EditorActivity, "Failed to read mapping asset: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                }
             }
         }
     }
 
-    // ---------- HIGHLIGHT VISIBLE ----------
+    // ---------- HIGHLIGHT (visible area only) ----------
     private fun scheduleHighlight(delayMs: Long = 80L) {
         uiUpdateJob?.cancel()
         uiUpdateJob = lifecycleScope.launch {
@@ -916,6 +884,7 @@ class EditorActivity : AppCompatActivity() {
                         idx++
                         while (idx < len && (visibleText[idx].isLetterOrDigit() || visibleText[idx] == '_')) idx++
                         val word = visibleText.substring(start, idx)
+                        // check mapping first
                         val color = when {
                             syntaxMapping.containsKey(word) -> syntaxMapping[word]
                             kotlinKeywords.contains(word) -> Color.parseColor("#82B1FF")
@@ -938,6 +907,7 @@ class EditorActivity : AppCompatActivity() {
                         for ((s, e, color) in spansToApply) {
                             editable.setSpan(ForegroundColorSpan(color), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                         }
+                        // formatting spans if enabled
                         if (formatOn) {
                             clearFormattingSpansInRange(startOffset, endOffset)
                             applyInlineFormattingInRange(editable, startOffset, endOffset)
@@ -963,31 +933,49 @@ class EditorActivity : AppCompatActivity() {
         val editable = binding.editor.text ?: return
         if (editable !is Spannable) return
         val styleSpans = editable.getSpans(rangeStart, rangeEnd, StyleSpan::class.java)
-        for (sp in styleSpans) { try { editable.removeSpan(sp) } catch (_: Exception) {} }
+        for (sp in styleSpans) {
+            try { editable.removeSpan(sp) } catch (_: Exception) {}
+        }
         val alignSpans = editable.getSpans(rangeStart, rangeEnd, AlignmentSpan::class.java)
-        for (sp in alignSpans) { try { editable.removeSpan(sp) } catch (_: Exception) {} }
+        for (sp in alignSpans) {
+            try { editable.removeSpan(sp) } catch (_: Exception) {}
+        }
         val replSpans = editable.getSpans(rangeStart, rangeEnd, ReplacementSpan::class.java)
-        for (sp in replSpans) { try { editable.removeSpan(sp) } catch (_: Exception) {} }
+        for (sp in replSpans) {
+            try { editable.removeSpan(sp) } catch (_: Exception) {}
+        }
     }
 
+    // Very light-weight inline formatting: applies StyleSpan / AlignmentSpan for tags found in the visible range.
+    // IMPORTANT: tags remain in text (we only visually style inner content). This matches your requirement:
+    // the raw file still contains tags but the editor shows visual formatting.
     private fun applyInlineFormattingInRange(editable: Spannable, rangeStart: Int, rangeEnd: Int) {
         val raw = editable.subSequence(rangeStart, rangeEnd).toString()
+
+        // Hide tags (<...>) by applying transparent ForegroundColorSpan — then apply other spans to inner text.
+        // We'll treat <tab> specially by placing a TabSpan (ReplacementSpan) to draw empty space.
+
+        // First: handle bold
         val boldRegex = Regex("<b>(.*?)</b>", RegexOption.DOT_MATCHES_ALL)
         for (m in boldRegex.findAll(raw)) {
             val inner = m.groups[1] ?: continue
             val openTagLen = "<b>".length
             val s = rangeStart + m.range.first + openTagLen
             val e = s + inner.value.length
-            try { editable.setSpan(StyleSpan(android.graphics.Typeface.BOLD), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) } catch (_: Exception) {}
+            try { editable.setSpan(StyleSpan(Typeface.BOLD), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) } catch (_: Exception) {}
         }
+
+        // italic
         val italicRegex = Regex("<i>(.*?)</i>", RegexOption.DOT_MATCHES_ALL)
         for (m in italicRegex.findAll(raw)) {
             val inner = m.groups[1] ?: continue
             val openTagLen = "<i>".length
             val s = rangeStart + m.range.first + openTagLen
             val e = s + inner.value.length
-            try { editable.setSpan(StyleSpan(android.graphics.Typeface.ITALIC), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) } catch (_: Exception) {}
+            try { editable.setSpan(StyleSpan(Typeface.ITALIC), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) } catch (_: Exception) {}
         }
+
+        // center
         val centerRegex = Regex("<center>(.*?)</center>", RegexOption.DOT_MATCHES_ALL)
         for (m in centerRegex.findAll(raw)) {
             val inner = m.groups[1] ?: continue
@@ -996,6 +984,8 @@ class EditorActivity : AppCompatActivity() {
             val e = s + inner.value.length
             try { editable.setSpan(AlignmentSpan.Standard(Layout.Alignment.ALIGN_CENTER), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) } catch (_: Exception) {}
         }
+
+        // Now: hide all tags inside the range (<...>)
         val tagRegex = Regex("<[^>]+>")
         for (m in tagRegex.findAll(raw)) {
             val tagText = m.value
@@ -1003,8 +993,11 @@ class EditorActivity : AppCompatActivity() {
             val tagGlobalEnd = rangeStart + m.range.last + 1
             try {
                 if (tagText.equals("<tab>", ignoreCase = true)) {
+                    // replace drawing of the tag with a visual blank using ReplacementSpan — leave underlying text intact.
+                    // Choose tab width based on current editor paint: a few spaces width
                     editable.setSpan(TabSpan(), tagGlobalStart, tagGlobalEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                 } else {
+                    // hide textual tag by making its foreground transparent
                     editable.setSpan(ForegroundColorSpan(Color.TRANSPARENT), tagGlobalStart, tagGlobalEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                 }
             } catch (_: Exception) {}
@@ -1013,23 +1006,28 @@ class EditorActivity : AppCompatActivity() {
 
     private fun attachScrollObserver() {
         if (scrollObserverAttached) return
-        onScrollListener = ViewTreeObserver.OnScrollChangedListener { scheduleHighlight() }
+        onScrollListener = ViewTreeObserver.OnScrollChangedListener {
+            scheduleHighlight()
+        }
         binding.editor.viewTreeObserver.addOnScrollChangedListener(onScrollListener)
         scrollObserverAttached = true
     }
 
-    // ---------- HISTORY ----------
+    // ---------- HISTORY helpers (undo/redo) ----------
     private fun pushHistorySnapshot(value: String) {
+        // add immediate snapshot (used by explicit actions)
         addHistorySnapshot(value)
     }
 
     private fun addHistorySnapshot(value: String) {
         if (historyIndex >= 0 && historyIndex < history.size && history[historyIndex] == value) return
+        // drop forward history
         if (historyIndex < history.size - 1) {
             for (i in history.size - 1 downTo historyIndex + 1) history.removeAt(i)
         }
         history.add(value)
         historyIndex = history.size - 1
+        // trim oldest entries
         while (history.size > maxHistory) {
             history.removeAt(0)
             historyIndex--
@@ -1048,8 +1046,14 @@ class EditorActivity : AppCompatActivity() {
 
     fun performUndo() {
         val undoEnabled = getSharedPreferences(prefsName, Context.MODE_PRIVATE).getBoolean(PREF_UNDO_ENABLED, true)
-        if (!undoEnabled) { Toast.makeText(this, "Undo disabled in settings", Toast.LENGTH_SHORT).show(); return }
-        if (historyIndex <= 0) { Toast.makeText(this, "Nothing to undo", Toast.LENGTH_SHORT).show(); return }
+        if (!undoEnabled) {
+            Toast.makeText(this, "Undo disabled in settings", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (historyIndex <= 0) {
+            Toast.makeText(this, "Nothing to undo", Toast.LENGTH_SHORT).show()
+            return
+        }
         historyIndex--
         val prev = history.getOrNull(historyIndex) ?: ""
         ignoreTextWatcher = true
@@ -1061,7 +1065,10 @@ class EditorActivity : AppCompatActivity() {
     }
 
     fun performRedo() {
-        if (historyIndex >= history.size - 1) { Toast.makeText(this, "Nothing to redo", Toast.LENGTH_SHORT).show(); return }
+        if (historyIndex >= history.size - 1) {
+            Toast.makeText(this, "Nothing to redo", Toast.LENGTH_SHORT).show()
+            return
+        }
         historyIndex++
         val next = history.getOrNull(historyIndex) ?: ""
         ignoreTextWatcher = true
@@ -1239,25 +1246,26 @@ class EditorActivity : AppCompatActivity() {
         return (dp * density).toInt()
     }
 
-    private fun getColorFromAttrOrDefault(attr: Int, def: Int): Int {
-        return try {
-            val typed = obtainStyledAttributes(intArrayOf(attr))
-            val color = typed.getColor(0, def)
-            typed.recycle()
-            color
-        } catch (e: Exception) {
-            def
-        }
-    }
-
     // ReplacementSpan that draws an empty block of width ~ 4 spaces (tab)
     private class TabSpan(private val spaces: Int = 4) : ReplacementSpan() {
         override fun getSize(paint: android.graphics.Paint, text: CharSequence?, start: Int, end: Int, fm: android.graphics.Paint.FontMetricsInt?): Int {
             val spaceWidth = paint.measureText(" ")
             return (spaceWidth * spaces).toInt()
         }
-        override fun draw(canvas: android.graphics.Canvas, text: CharSequence?, start: Int, end: Int, x: Float, top: Int, y: Int, bottom: Int, paint: android.graphics.Paint) {
+
+        override fun draw(
+            canvas: android.graphics.Canvas,
+            text: CharSequence?,
+            start: Int,
+            end: Int,
+            x: Float,
+            top: Int,
+            y: Int,
+            bottom: Int,
+            paint: android.graphics.Paint
+        ) {
             // draw nothing (just advance)
+            // If desired, could draw a faint guide; we intentionally draw nothing to leave blank space.
         }
     }
 }
