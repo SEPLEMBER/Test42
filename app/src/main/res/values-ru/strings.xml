@@ -88,6 +88,11 @@
 
     <string name="dialog_decrypting_title">Расшифровка</string>
     <string name="dialog_decrypting_message">Пожалуйста, подождите</string>
+    <string name="toast_decrypt_done">Расшифровка завершена</string>
+    <string name="toast_nothing_to_decrypt">Нечего расшифровывать</string>
+
+    <string name="toast_amber_on">Режим янтаря включён</string>
+    <string name="toast_amber_off">Режим янтаря выключен</string>
 
     <string name="toast_language_set">Язык установлен: %1$s</string>
 
