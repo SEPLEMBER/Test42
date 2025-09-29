@@ -160,7 +160,11 @@ class SettingsActivity : AppCompatActivity() {
 
         swAmber?.setOnCheckedChangeListener { _: CompoundButton, checked: Boolean ->
             sp.edit().putBoolean(PREF_AMBER_MODE, checked).apply()
-            Toast.makeText(this, if (checked) "Amber mode enabled" else "Amber mode disabled", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+    this,
+    if (checked) getString(R.string.toast_amber_on) else getString(R.string.toast_amber_off),
+    Toast.LENGTH_SHORT
+).show()
         }
 
         // listener: font size radio group
@@ -196,7 +200,11 @@ class SettingsActivity : AppCompatActivity() {
                 else -> "kotlin"
             }
             sp.edit().putString(PREF_SYNTAX_LANGUAGE, langValue).apply()
-            Toast.makeText(this, "Language set to $langValue", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+    this,
+    getString(R.string.toast_language_set, langValue),
+    Toast.LENGTH_SHORT
+).show()
         }
     }
 
