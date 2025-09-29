@@ -53,7 +53,7 @@
     <string name="settings_amber_on">Янтарная тема включена</string>
     <string name="settings_amber_off">Янтарная тема отключена</string>
 
-    <string name="settings_language_changed">Язык программирования изменён на %1$s</string>
+    <string name="settings_language_changed">Язык программирования изменён на %s</string>
 
     <string name="menu_select_all">Выделить всё</string>
 
