@@ -69,5 +69,6 @@
     <string name="menu_quick">Quick</string>
 <string name="menu_clear">Clear</string>
 <string name="menu_about">About</string>
+<string name="textRust">Rust</string>
 
 </resources>
