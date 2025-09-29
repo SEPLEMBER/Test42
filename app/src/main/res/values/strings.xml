@@ -78,7 +78,7 @@
 4. After changing syntax highlighting settings, it is recommended to restart the application.
 5. Data protection is implemented based on the AES algorithm in GCM mode with HMAC-SHA256 and PBKDF2 (75,000 iterations). Using a random and sufficiently complex password ensures a high level of protection. Important: A weak password negates all cryptographic measures, so for corporate or sensitive data, use strong passwords, preferably generated and stored in a password manager.
 6. This editor is part of the Syndes ecosystem. Use for work tasks is permitted and not restricted by the license. The project is free and distributed with open source.
-7. Disclaimer: The developers are not responsible for any consequences of using the editor. We strive to provide the most reliable software, but 100% stability cannot be guaranteed. Regular file backups significantly reduce the risk of data loss.</string>
+7. Disclaimer: The developers are not responsible for any consequences of using the editor. We strive to provide the most reliable software, but 100 prc. stability cannot be guaranteed. Regular file backups significantly reduce the risk of data loss.</string>
     <string name="section_developers_title">👨‍💻 Developers</string>
     <string name="section_developers_text">Syndes Project, September 2025. An open-source project created by volunteers and available to the community.</string>
 
