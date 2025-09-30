@@ -55,7 +55,6 @@ dependencies {
 
     // RecyclerView
     implementation(libs.recyclerview)
-    implementation(libs.recyclerview.ktx)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
