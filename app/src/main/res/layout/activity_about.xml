@@ -21,23 +21,89 @@
             android:textStyle="bold"
             android:paddingBottom="8dp" />
 
+        <!-- Каждый пункт туториала — отдельный TextView -->
         <TextView
-            android:id="@+id/tv_tutorial_text"
+            android:id="@+id/tutorial_item_1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/section_tutorial_text"
+            android:text="@string/section_tutorial_item1"
             android:textColor="#CCCCCC"
             android:textSize="16sp"
-            android:paddingBottom="24dp"
             android:lineSpacingExtra="4dp"
-            android:scrollHorizontally="false"
-            android:ellipsize="none"
-            android:inputType="textMultiLine"
-            android:singleLine="false"
+            android:paddingBottom="12dp"
             android:includeFontPadding="true"
-            android:paddingTop="4dp"
-            android:paddingStart="2dp"
-            android:paddingEnd="2dp"
+            android:gravity="start|top" />
+
+        <TextView
+            android:id="@+id/tutorial_item_2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/section_tutorial_item2"
+            android:textColor="#CCCCCC"
+            android:textSize="16sp"
+            android:lineSpacingExtra="4dp"
+            android:paddingBottom="12dp"
+            android:includeFontPadding="true"
+            android:gravity="start|top" />
+
+        <TextView
+            android:id="@+id/tutorial_item_3"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/section_tutorial_item3"
+            android:textColor="#CCCCCC"
+            android:textSize="16sp"
+            android:lineSpacingExtra="4dp"
+            android:paddingBottom="12dp"
+            android:includeFontPadding="true"
+            android:gravity="start|top" />
+
+        <TextView
+            android:id="@+id/tutorial_item_4"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/section_tutorial_item4"
+            android:textColor="#CCCCCC"
+            android:textSize="16sp"
+            android:lineSpacingExtra="4dp"
+            android:paddingBottom="12dp"
+            android:includeFontPadding="true"
+            android:gravity="start|top" />
+
+        <TextView
+            android:id="@+id/tutorial_item_5"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/section_tutorial_item5"
+            android:textColor="#CCCCCC"
+            android:textSize="16sp"
+            android:lineSpacingExtra="4dp"
+            android:paddingBottom="12dp"
+            android:includeFontPadding="true"
+            android:gravity="start|top" />
+
+        <TextView
+            android:id="@+id/tutorial_item_6"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/section_tutorial_item6"
+            android:textColor="#CCCCCC"
+            android:textSize="16sp"
+            android:lineSpacingExtra="4dp"
+            android:paddingBottom="12dp"
+            android:includeFontPadding="true"
+            android:gravity="start|top" />
+
+        <TextView
+            android:id="@+id/tutorial_item_7"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/section_tutorial_item7"
+            android:textColor="#CCCCCC"
+            android:textSize="16sp"
+            android:lineSpacingExtra="4dp"
+            android:paddingBottom="24dp"
+            android:includeFontPadding="true"
             android:gravity="start|top" />
 
         <!-- Секция: Разработчики -->
@@ -58,10 +124,6 @@
             android:textSize="16sp"
             android:paddingBottom="24dp"
             android:lineSpacingExtra="4dp"
-            android:scrollHorizontally="false"
-            android:ellipsize="none"
-            android:inputType="textMultiLine"
-            android:singleLine="false"
             android:includeFontPadding="true"
             android:gravity="start|top" />
 
@@ -83,10 +145,6 @@
             android:textSize="16sp"
             android:paddingBottom="24dp"
             android:lineSpacingExtra="4dp"
-            android:scrollHorizontally="false"
-            android:ellipsize="none"
-            android:inputType="textMultiLine"
-            android:singleLine="false"
             android:includeFontPadding="true"
             android:gravity="start|top" />
     </LinearLayout>
