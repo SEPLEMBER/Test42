@@ -67,10 +67,12 @@
     <string name="textRust">Rust</string>
     <string name="stats_default">Words: 0 | Chars: 0</string>
     <string name="editor_hint">Start typing...</string>
-    <string name="empty_hint">Empty document — use File → Open/Save</string>
+    <string name="empty_hint">...</string>
     <string name="jump_top">Jump to top</string>
     <string name="jump_bottom">Jump to bottom</string>
     <string name="close_button">Close</string>
+    <string name="no_current_match_to_replace">No current match to replace</string>
+    <string name="replaced_all">Replaced all</string>
 
     <string name="section_tutorial_title">📖 Instructions and Tips</string>
 
