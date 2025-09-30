@@ -53,6 +53,11 @@ dependencies {
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)
 
+    implementation(libs.recyclerview)
+    implementation(libs.markwon.core)
+    implementation(libs.markwon.syntax)
+    implementation(libs.prism4j.bundler)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
