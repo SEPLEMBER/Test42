@@ -53,10 +53,9 @@ dependencies {
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)
 
+    // RecyclerView
     implementation(libs.recyclerview)
-    implementation(libs.markwon.core)
-    implementation(libs.markwon.syntax)
-    // prism4j-bundler removed to avoid duplicate classes; if you need bundler, add it with exclusions
+    implementation(libs.recyclerview.ktx)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
