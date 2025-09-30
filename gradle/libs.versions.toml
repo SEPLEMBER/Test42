@@ -8,7 +8,6 @@ kotlin = "1.9.0"
 coreKtx = "1.13.1"
 documentfile = "1.0.1"
 coroutines = "1.7.3"
-recyclerview = "1.3.0"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -19,7 +18,6 @@ core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx"
 documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
 coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
-recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerview" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
