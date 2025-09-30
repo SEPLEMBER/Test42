@@ -460,10 +460,10 @@ class EditorActivity : AppCompatActivity() {
         if (!lastQuery.isNullOrEmpty()) etFind.setText(lastQuery)
 
         val dialog = AlertDialog.Builder(this)
-            .setTitle(getString(R.string.dialog_find_replace_title))
-            .setView(view)
-            .setNegativeButton("Close", null)
-            .create()
+       .setTitle(getString(R.string.dialog_find_replace_title))
+       .setView(view)
+       .setNegativeButton(getString(R.string.close_button), null)
+       .create()
 
         fun selectMatchAt(index: Int) {
             if (index < 0 || index >= matches.size) return
