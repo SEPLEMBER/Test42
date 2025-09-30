@@ -56,7 +56,7 @@ dependencies {
     implementation(libs.recyclerview)
     implementation(libs.markwon.core)
     implementation(libs.markwon.syntax)
-    implementation(libs.prism4j.bundler)
+    // prism4j-bundler removed to avoid duplicate classes; if you need bundler, add it with exclusions
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
