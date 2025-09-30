@@ -11,7 +11,8 @@
 
         <!-- Секция: Туториал -->
         <TextView
-            android:layout_width="wrap_content"
+            android:id="@+id/tv_tutorial_title"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/section_tutorial_title"
             android:textColor="#FFFFFF"
@@ -20,16 +21,27 @@
             android:paddingBottom="8dp" />
 
         <TextView
-            android:layout_width="wrap_content"
+            android:id="@+id/tv_tutorial_text"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/section_tutorial_text"
             android:textColor="#CCCCCC"
             android:textSize="16sp"
-            android:paddingBottom="24dp" />
+            android:paddingBottom="24dp"
+            android:lineSpacingExtra="4dp"
+            android:scrollHorizontally="false"
+            android:breakStrategy="balanced"
+            android:includeFontPadding="true"
+            android:hyphenationFrequency="normal"
+            android:paddingTop="4dp"
+            android:paddingLeft="2dp"
+            android:paddingRight="2dp"
+            <!-- only for API 26+; ignored on older -->
+            android:justificationMode="inter_word" />
 
         <!-- Секция: Разработчики -->
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/section_developers_title"
             android:textColor="#FFFFFF"
@@ -38,16 +50,17 @@
             android:paddingBottom="8dp" />
 
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/section_developers_text"
             android:textColor="#CCCCCC"
             android:textSize="16sp"
-            android:paddingBottom="24dp" />
+            android:paddingBottom="24dp"
+            android:lineSpacingExtra="4dp" />
 
         <!-- Секция: Лицензия -->
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/section_license_title"
             android:textColor="#FFFFFF"
@@ -56,11 +69,12 @@
             android:paddingBottom="8dp" />
 
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/section_license_text"
             android:textColor="#CCCCCC"
             android:textSize="16sp"
-            android:paddingBottom="24dp" />
+            android:paddingBottom="24dp"
+            android:lineSpacingExtra="4dp" />
     </LinearLayout>
 </ScrollView>
