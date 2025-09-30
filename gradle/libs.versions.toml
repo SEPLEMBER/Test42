@@ -9,10 +9,10 @@ coreKtx = "1.13.1"
 documentfile = "1.0.1"
 coroutines = "1.7.3"
 
-# версии, добавленные ранее (но recyclerview понижена)
+# версии, добавленные ранее (recyclerview понижена для совместимости с compileSdk = 34)
 recyclerview = "1.3.0"
 markwon = "4.6.2"
-prism4j = "2.0.0"
+# prism4j (bundler) удалён из version catalog чтобы избежать duplicate classes
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -31,8 +31,9 @@ recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version
 markwon-core = { group = "io.noties.markwon", name = "core", version.ref = "markwon" }
 markwon-syntax = { group = "io.noties.markwon", name = "syntax-highlight", version.ref = "markwon" }
 
-# prism4j bundler (опционально)
-prism4j-bundler = { group = "io.noties", name = "prism4j-bundler", version.ref = "prism4j" }
+# prism4j-bundler intentionally removed to avoid duplicate-class conflicts.
+# Если позже понадобится prism4j-bundler, лучше добавить его явно в app/build.gradle.kts
+# с исключениями транзитивных артефактов, вызывающих коллизии.
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
