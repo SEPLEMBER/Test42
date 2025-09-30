@@ -1,64 +1,40 @@
-plugins {
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
-}
+[versions]
+agp = "8.4.0"
+junit = "4.13.2"
+junitVersion = "1.1.5"
+espressoCore = "3.5.1"
+appcompat = "1.6.1"
+kotlin = "1.9.0"
+coreKtx = "1.13.1"
+documentfile = "1.0.1"
+coroutines = "1.7.3"
 
-android {
-    namespace = "org.syndes.rust"
-    compileSdk = 34
+# версии, добавленные ранее (recyclerview понижена для совместимости с compileSdk = 34)
+recyclerview = "1.3.0"
+markwon = "4.6.2"
+# prism4j (bundler) удалён из version catalog чтобы избежать duplicate classes
 
-    defaultConfig {
-        applicationId = "org.syndes.rust"
-        minSdk = 26
-        targetSdk = 34
-        versionCode = 2
-        versionName = "1.1"
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-    }
+[libraries]
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
+espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
+coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
+coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 
-    buildTypes {
-        release {
-            isMinifyEnabled = true // Включен R8 для оптимизации
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
-    }
+# RecyclerView - downgraded to 1.3.0 so it works with compileSdk = 34
+recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerview" }
 
-    buildFeatures {
-        viewBinding = true
-    }
+# Markwon + syntax highlight (без изменения)
+markwon-core = { group = "io.noties.markwon", name = "core", version.ref = "markwon" }
+markwon-syntax = { group = "io.noties.markwon", name = "syntax-highlight", version.ref = "markwon" }
 
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
-    }
+# prism4j-bundler intentionally removed to avoid duplicate-class conflicts.
+# Если позже понадобится prism4j-bundler, лучше добавить его явно в app/build.gradle.kts
+# с исключениями транзитивных артефактов, вызывающих коллизии.
 
-    kotlinOptions {
-        jvmTarget = "1.8"
-    }
-
-    dependenciesInfo {
-        includeInApk = false
-        includeInBundle = false
-    }
-}
-
-dependencies {
-    implementation(libs.core.ktx)
-    implementation(libs.appcompat)
-    implementation(libs.documentfile)
-
-    implementation(libs.coroutines.core)
-    implementation(libs.coroutines.android)
-
-    implementation(libs.recyclerview)
-    implementation(libs.markwon.core)
-    implementation(libs.markwon.syntax)
-    // prism4j-bundler removed to avoid duplicate classes; if you need bundler, add it with exclusions
-
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.ext.junit)
-    androidTestImplementation(libs.espresso.core)
-}
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
