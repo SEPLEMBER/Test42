@@ -673,7 +673,7 @@ class EditorActivity : AppCompatActivity() {
             binding.editor.setTextColor(Color.parseColor("#FFBF00")) // янтарный
         } else if (retro) {
             binding.editor.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
-            binding.editor.setTextColor(Color.parseColor("#ff00ff00"))
+            binding.editor.setTextColor(Color.parseColor("#00FF66"))
         } else {
             binding.editor.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
             binding.editor.setTextColor(getColorFromAttrOrDefault(android.R.attr.textColorPrimary, Color.parseColor("#E0E0E0")))
