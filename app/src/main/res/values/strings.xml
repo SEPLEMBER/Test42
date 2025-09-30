@@ -71,15 +71,23 @@
     <string name="empty_hint">Empty document — use File → Open/Save</string>
     <string name="jump_top">Jump to top</string>
     <string name="jump_bottom">Jump to bottom</string>
+    <string name="close_button">Close</string>
 
     <string name="section_tutorial_title">📖 Instructions and Tips</string>
-    <string name="section_tutorial_text">1. Fast scrolling is supported: Swipe right to left and up or down. Quick navigation to the start or end of the file is available by tapping the top or bottom right corners.&#10;&#10;
-2. Fast copying is supported: Long press anywhere + "ALL" button. Quick text deletion is also available: "ALL" + "DELETE" (on the keyboard).&#10;&#10;
-3. Editing very large files can be resource-intensive depending on the device. However, for most scenarios (up to 100,000 characters or more), no issues typically arise.&#10;&#10;
-4. After changing syntax highlighting settings, it is recommended to restart the application.&#10;&#10;
-5. Data protection is implemented based on the AES algorithm in GCM mode with HMAC-SHA256 and PBKDF2 (75,000 iterations). Using a random and sufficiently complex password ensures a high level of protection. Important: A weak password negates all cryptographic measures, so for corporate or sensitive data, use strong passwords, preferably generated and stored in a password manager.&#10;&#10;
-6. This editor is part of the Syndes ecosystem. Use for work tasks is permitted and not restricted by the license. The project is free and distributed with open source.&#10;&#10;
-7. Disclaimer: The developers are not responsible for any consequences of using the editor. We strive to provide the most reliable software, but complete stability cannot be guaranteed. Regular file backups significantly reduce the risk of data loss.</string>
+
+    <string name="section_tutorial_item1">1. Fast scrolling is supported: swipe right-to-left and up or down. Quick navigation to the start or end of the file is available by tapping the top or bottom right corner.</string>
+
+    <string name="section_tutorial_item2">2. Fast copying is supported: long-press anywhere and use the "ALL" button. Quick text deletion is also available via "ALL" + "DELETE" on the keyboard.</string>
+
+    <string name="section_tutorial_item3">3. Editing very large files may be resource-intensive depending on the device. For most scenarios (up to 100,000 characters or more) the editor performs normally.</string>
+
+    <string name="section_tutorial_item4">4. After changing syntax highlighting settings, it is recommended to restart the application.</string>
+
+    <string name="section_tutorial_item5">5. Data protection is implemented using AES-GCM with HMAC-SHA256 and PBKDF2 (75,000 iterations). Use a random and sufficiently complex password for strong protection. Note: a weak password undermines cryptographic measures; for sensitive data use a password manager.</string>
+
+    <string name="section_tutorial_item6">6. This editor is part of the Syndes ecosystem. Use for work tasks is permitted and not restricted by the license. The project is free and distributed as open source.</string>
+
+    <string name="section_tutorial_item7">7. Disclaimer: the developers are not responsible for consequences of using the editor. We strive to provide reliable software, but complete stability cannot be guaranteed. Regular backups reduce the risk of data loss.</string>
 
     <!-- Dialog / toast strings -->
     <string name="dialog_find_replace_title">Find / Replace</string>
@@ -101,5 +109,5 @@
     <string name="section_developers_text">Syndes Project, September 2025. An open-source project created by volunteers and available to the community.</string>
 
     <string name="section_license_title">📜 License</string>
-    <string name="section_license_text">This non-commercial application is distributed under the Apache License 2.0.&#10;Use, modification, and forking are permitted. Please retain attribution to the original project: "Based on the Rust editor by Syndes Project" at least in the "About" section.&#10;See the full license text in the LICENSE file.</string>
+    <string name="section_license_text">This non-commercial application is distributed under the Apache License 2.0.&#10;Use, modification and forking are permitted. Please retain attribution to the original project: "Based on the Rust editor by Syndes Project" at least in the "About" section.&#10;See the full license text in the LICENSE file.</string>
 </resources>
