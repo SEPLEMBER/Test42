@@ -526,7 +526,9 @@ class EditorActivity : AppCompatActivity() {
             val q = etFind.text.toString()
             val r = etReplace.text.toString()
             if (q.isEmpty()) { Toast.makeText(this, "Query empty", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
-            if (matches.isEmpty() || currentMatchIdx < 0) { Toast.makeText(this, "No current match to replace", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
+            if (matches.isEmpty() || currentMatchIdx < 0) { 
+            Toast.makeText(this, getString(R.string.no_current_match_to_replace), Toast.LENGTH_SHORT).show()
+ return@setOnClickListener }
             val range = matches[currentMatchIdx]
             val editable = binding.editor.text ?: return@setOnClickListener
             editable.replace(range.first, range.last + 1, r)
@@ -554,7 +556,7 @@ class EditorActivity : AppCompatActivity() {
                     tvCount.text = "0 matches"
                     scheduleStatsUpdate()
                     pushHistorySnapshot(replaced)
-                    Toast.makeText(this@EditorActivity, "Replaced all", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@EditorActivity, getString(R.string.replaced_all), Toast.LENGTH_SHORT).show()
                 }
             }
         }
