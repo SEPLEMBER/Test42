@@ -9,6 +9,11 @@ coreKtx = "1.13.1"
 documentfile = "1.0.1"
 coroutines = "1.7.3"
 
+# Добавленные версии
+recyclerview = "1.4.0"
+markwon = "4.6.2"
+prism4j = "2.0.0"
+
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
@@ -18,6 +23,14 @@ core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx"
 documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
 coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+
+# Новые библиотеки
+recyclerview = { module = "androidx.recyclerview:recyclerview", version.ref = "recyclerview" }
+
+markwon-core = { group = "io.noties.markwon", name = "core", version.ref = "markwon" }
+markwon-syntax = { group = "io.noties.markwon", name = "syntax-highlight", version.ref = "markwon" }
+
+prism4j-bundler = { group = "io.noties", name = "prism4j-bundler", version.ref = "prism4j" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
