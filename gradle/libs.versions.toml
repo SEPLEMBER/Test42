@@ -8,11 +8,8 @@ kotlin = "1.9.0"
 coreKtx = "1.13.1"
 documentfile = "1.0.1"
 coroutines = "1.7.3"
-
-# версии, добавленные ранее (recyclerview понижена для совместимости с compileSdk = 34)
 recyclerview = "1.3.0"
-markwon = "4.6.2"
-# prism4j (bundler) удалён из version catalog чтобы избежать duplicate classes
+recyclerview-ktx = "1.3.0"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -23,17 +20,8 @@ core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx"
 documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
 coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
-
-# RecyclerView - downgraded to 1.3.0 so it works with compileSdk = 34
 recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerview" }
-
-# Markwon + syntax highlight (без изменения)
-markwon-core = { group = "io.noties.markwon", name = "core", version.ref = "markwon" }
-markwon-syntax = { group = "io.noties.markwon", name = "syntax-highlight", version.ref = "markwon" }
-
-# prism4j-bundler intentionally removed to avoid duplicate-class conflicts.
-# Если позже понадобится prism4j-bundler, лучше добавить его явно в app/build.gradle.kts
-# с исключениями транзитивных артефактов, вызывающих коллизии.
+recyclerview-ktx = { group = "androidx.recyclerview", name = "recyclerview-ktx", version.ref = "recyclerview-ktx" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
