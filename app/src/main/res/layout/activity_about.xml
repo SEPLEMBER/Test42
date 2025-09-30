@@ -31,13 +31,14 @@
             android:paddingBottom="24dp"
             android:lineSpacingExtra="4dp"
             android:scrollHorizontally="false"
-            android:breakStrategy="balanced"
+            android:ellipsize="none"
+            android:inputType="textMultiLine"
+            android:singleLine="false"
             android:includeFontPadding="true"
-            android:hyphenationFrequency="normal"
             android:paddingTop="4dp"
-            android:paddingLeft="2dp"
-            android:paddingRight="2dp"
-            android:justificationMode="inter_word" />
+            android:paddingStart="2dp"
+            android:paddingEnd="2dp"
+            android:gravity="start|top" />
 
         <!-- Секция: Разработчики -->
         <TextView
@@ -56,7 +57,13 @@
             android:textColor="#CCCCCC"
             android:textSize="16sp"
             android:paddingBottom="24dp"
-            android:lineSpacingExtra="4dp" />
+            android:lineSpacingExtra="4dp"
+            android:scrollHorizontally="false"
+            android:ellipsize="none"
+            android:inputType="textMultiLine"
+            android:singleLine="false"
+            android:includeFontPadding="true"
+            android:gravity="start|top" />
 
         <!-- Секция: Лицензия -->
         <TextView
@@ -75,6 +82,13 @@
             android:textColor="#CCCCCC"
             android:textSize="16sp"
             android:paddingBottom="24dp"
-            android:lineSpacingExtra="4dp" />
+            android:lineSpacingExtra="4dp"
+            android:scrollHorizontally="false"
+            android:ellipsize="none"
+            android:inputType="textMultiLine"
+            android:singleLine="false"
+            android:includeFontPadding="true"
+            android:gravity="start|top" />
     </LinearLayout>
+
 </ScrollView>
