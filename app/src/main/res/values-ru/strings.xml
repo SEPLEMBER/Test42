@@ -67,10 +67,12 @@
     <string name="textRust">Rust</string>
     <string name="stats_default">Слов: 0 | Символов: 0</string>
     <string name="editor_hint">Начните печатать...</string>
-    <string name="empty_hint">Пустой документ — используйте Файл → Открыть/Сохранить</string>
+    <string name="empty_hint">...</string>
     <string name="jump_top">Перейти к началу</string>
     <string name="jump_bottom">Перейти к концу</string>
     <string name="close_button">Закрыть</string>
+<string name="no_current_match_to_replace">Нет текущего совпадения для замены</string>
+    <string name="replaced_all">Всё заменено</string>
 
     <string name="section_tutorial_title">📖 Инструкции и советы</string>
 
