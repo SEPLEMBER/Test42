@@ -4,4 +4,4 @@ test
 unstable...
 
 o
-mob.
+deskt off
