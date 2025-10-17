@@ -100,8 +100,16 @@ class EditorActivity : AppCompatActivity() {
         "private","public","protected","internal","override","when","in","is","null","true","false"
     )
 
-    // loaded mapping from external .txt (token -> color int)
+    // loaded mapping from external .txt (token(lowercase) -> color int)
     private val syntaxMapping = mutableMapOf<String, Int>()
+
+    // helper: keys sorted by length desc for greedy matching
+    private var keysByLengthDesc: List<String> = emptyList()
+
+    // Colors used by special rules
+    private val COLOR_PURPLE = Color.parseColor("#9C27B0")     // фиолетово-сиреневый
+    private val COLOR_TURQUOISE = Color.parseColor("#00BCD4")  // бирюзовый (содержимое скобок)
+    private val COLOR_COMMENT_GREY = Color.parseColor("#9E9E9E") // слегка серый (комментарии)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // apply theme preference early
@@ -245,8 +253,6 @@ class EditorActivity : AppCompatActivity() {
             } catch (_: Exception) { /* ignore touch errors */ }
             false
         }
-
-        // if activity launched with an initial file intent (optional), you might want to open it here
     }
 
     override fun onResume() {
@@ -526,9 +532,10 @@ class EditorActivity : AppCompatActivity() {
             val q = etFind.text.toString()
             val r = etReplace.text.toString()
             if (q.isEmpty()) { Toast.makeText(this, "Query empty", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
-            if (matches.isEmpty() || currentMatchIdx < 0) { 
-            Toast.makeText(this, getString(R.string.no_current_match_to_replace), Toast.LENGTH_SHORT).show()
- return@setOnClickListener }
+            if (matches.isEmpty() || currentMatchIdx < 0) {
+                Toast.makeText(this, getString(R.string.no_current_match_to_replace), Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
             val range = matches[currentMatchIdx]
             val editable = binding.editor.text ?: return@setOnClickListener
             editable.replace(range.first, range.last + 1, r)
@@ -568,7 +575,7 @@ class EditorActivity : AppCompatActivity() {
         })
 
         dialog.show()
-   dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
         val initialQuery = etFind.text.toString()
         if (initialQuery.isNotEmpty()) computeMatchesAndUpdate(initialQuery)
     }
@@ -784,7 +791,7 @@ class EditorActivity : AppCompatActivity() {
                                 val colorStr = parts[1]
                                 try {
                                     val color = Color.parseColor(colorStr)
-                                    if (token.isNotEmpty()) map[token] = color
+                                    if (token.isNotEmpty()) map[token.lowercase()] = color
                                 } catch (_: Exception) {
                                     // ignore invalid color
                                 }
@@ -794,6 +801,8 @@ class EditorActivity : AppCompatActivity() {
                         withContext(Dispatchers.Main) {
                             syntaxMapping.clear()
                             syntaxMapping.putAll(map)
+                            // update keys sorted by length (desc) for greedy matching
+                            keysByLengthDesc = syntaxMapping.keys.sortedByDescending { it.length }
                             // persist uri so we can reload next time
                             getSharedPreferences(prefsName, Context.MODE_PRIVATE).edit().putString(PREF_SYNTAX_MAPPING_URI, uri.toString()).apply()
                         }
@@ -825,7 +834,7 @@ class EditorActivity : AppCompatActivity() {
                                 val colorStr = parts[1]
                                 try {
                                     val color = Color.parseColor(colorStr)
-                                    if (token.isNotEmpty()) map[token] = color
+                                    if (token.isNotEmpty()) map[token.lowercase()] = color
                                 } catch (_: Exception) {
                                     // ignore invalid color
                                 }
@@ -834,6 +843,7 @@ class EditorActivity : AppCompatActivity() {
                         withContext(Dispatchers.Main) {
                             syntaxMapping.clear()
                             syntaxMapping.putAll(map)
+                            keysByLengthDesc = syntaxMapping.keys.sortedByDescending { it.length }
                             // do not persist assets as URI; but store language pref (already done via settings)
                         }
                     }
@@ -876,39 +886,249 @@ class EditorActivity : AppCompatActivity() {
             val endOffset = layout.getLineEnd(bottomLine).coerceAtMost(binding.editor.text?.length ?: 0)
 
             val visibleText = binding.editor.text?.subSequence(startOffset, endOffset)?.toString() ?: ""
-            val spansToApply = mutableListOf<Triple<Int, Int, Int>>()
-            if (visibleText.isNotEmpty()) {
-                var idx = 0
-                val len = visibleText.length
-                while (idx < len) {
-                    val c = visibleText[idx]
-                    if (c.isLetter() || c == '_') {
-                        val start = idx
-                        idx++
-                        while (idx < len && (visibleText[idx].isLetterOrDigit() || visibleText[idx] == '_')) idx++
-                        val word = visibleText.substring(start, idx)
-                        // check mapping first
-                        val color = when {
-                            syntaxMapping.containsKey(word) -> syntaxMapping[word]
-                            kotlinKeywords.contains(word) -> Color.parseColor("#82B1FF")
-                            else -> null
-                        }
-                        if (color != null) {
-                            val globalStart = startOffset + start
-                            val globalEnd = startOffset + idx
-                            spansToApply.add(Triple(globalStart, globalEnd, color))
-                        }
-                    } else idx++
+            if (visibleText.isEmpty()) {
+                withContext(Dispatchers.Main) {
+                    clearForegroundSpansInRange(startOffset, endOffset)
+                    if (!formatOn) clearFormattingSpansInRange(startOffset, endOffset)
+                }
+                return@launch
+            }
+
+            val visibleLower = visibleText.lowercase()
+            val len = visibleText.length
+
+            // Arrays to mark regions
+            val commentMask = BooleanArray(len) { false }  // true => skip other highlighting
+            val occupied = BooleanArray(len) { false }     // true => already covered by higher-priority span
+
+            val spansToApply = mutableListOf<Triple<Int, Int, Int>>() // globalStart, globalEnd, color
+
+            // 1) Detect full-line comments (trimmed startsWith "//" or "<-") and mark them grey
+            var localIdx = 0
+            while (localIdx < len) {
+                val lineStartLocal = localIdx
+                val newlinePos = visibleText.indexOf('\n', localIdx).let { if (it == -1) len else it }
+                val lineEndLocal = newlinePos
+                // get trimmed leading substring to check start
+                var p = lineStartLocal
+                while (p < lineEndLocal && visibleText[p].isWhitespace()) p++
+                if (p < lineEndLocal) {
+                    // check for comment markers
+                    if (visibleText.startsWith("//", p) || visibleText.startsWith("<-", p)) {
+                        // mark entire line as comment
+                        for (i in lineStartLocal until lineEndLocal) commentMask[i] = true
+                        val gStart = startOffset + lineStartLocal
+                        val gEnd = startOffset + lineEndLocal
+                        spansToApply.add(Triple(gStart, gEnd, COLOR_COMMENT_GREY))
+                        for (i in lineStartLocal until lineEndLocal) occupied[i] = true
+                    }
+                }
+                localIdx = if (newlinePos == -1) len else newlinePos + 1
+            }
+
+            // 2) Bracket pairing for (), {}, []
+            data class PairLocal(val open: Int, val close: Int)
+            val stackRound = ArrayDeque<Int>()
+            val stackCurly = ArrayDeque<Int>()
+            val stackSquare = ArrayDeque<Int>()
+            val pairs = mutableListOf<PairLocal>()
+            for (i in 0 until len) {
+                if (commentMask[i]) continue
+                when (visibleText[i]) {
+                    '(' -> stackRound.addLast(i)
+                    '{' -> stackCurly.addLast(i)
+                    '[' -> stackSquare.addLast(i)
+                    ')' -> if (stackRound.isNotEmpty()) {
+                        val o = stackRound.removeLast()
+                        pairs.add(PairLocal(o, i))
+                    }
+                    '}' -> if (stackCurly.isNotEmpty()) {
+                        val o = stackCurly.removeLast()
+                        pairs.add(PairLocal(o, i))
+                    }
+                    ']' -> if (stackSquare.isNotEmpty()) {
+                        val o = stackSquare.removeLast()
+                        pairs.add(PairLocal(o, i))
+                    }
                 }
             }
+            // For each pair, highlight inner content (excluding brackets). Do not color brackets.
+            for (pr in pairs) {
+                val innerStart = pr.open + 1
+                val innerEnd = pr.close
+                if (innerStart >= innerEnd) continue
+                // We may have comments inside; only color subranges that are not commentMask
+                var s = innerStart
+                while (s < innerEnd) {
+                    // skip commented
+                    while (s < innerEnd && commentMask[s]) s++
+                    if (s >= innerEnd) break
+                    var e = s
+                    while (e < innerEnd && !commentMask[e]) e++
+                    // add turquoise span for [s, e)
+                    val gS = startOffset + s
+                    val gE = startOffset + e
+                    // mark occupied
+                    for (i in s until e) occupied[i] = true
+                    spansToApply.add(Triple(gS, gE, COLOR_TURQUOISE))
+                    s = e
+                }
+            }
+
+            // 3) Special contextual rules based on word tokens:
+            //    - package: all following words in same line -> purple
+            //    - private var|val <first-name> -> purple (first name after var/val)
+            //    - override fun <first-name> -> purple
+            // We'll scan word tokens using regex-like approach (letters/digits/_)
+            val wordRegex = Regex("[A-Za-z_][A-Za-z0-9_]*")
+            val wordMatches = wordRegex.findAll(visibleText).toList() // includes positions
+            // create list of (startLocal, endLocal, wordLower)
+            data class W(val s: Int, val e: Int, val word: String)
+            val words = wordMatches.map { W(it.range.first, it.range.last + 1, it.value.lowercase()) }
+
+            var iWord = 0
+            while (iWord < words.size) {
+                val w = words[iWord]
+                // skip if in commented line (we'll check commentMask at token start)
+                if (commentMask.getOrNull(w.s) == true) { iWord++; continue }
+                when (w.word) {
+                    "package" -> {
+                        // highlight all words after package in the same line
+                        // compute line end local
+                        val lineEndLocal = visibleText.indexOf('\n', w.e).let { if (it == -1) len else it }
+                        // find all words that start >= w.e and < lineEndLocal
+                        for (j in iWord + 1 until words.size) {
+                            val ww = words[j]
+                            if (ww.s >= lineEndLocal) break
+                            if (commentMask.getOrNull(ww.s) == true) continue
+                            val gS = startOffset + ww.s
+                            val gE = startOffset + ww.e
+                            // mark occupied and add purple span
+                            var already = false
+                            for (p in ww.s until ww.e) if (occupied[p]) { already = true; break }
+                            if (!already) {
+                                for (p in ww.s until ww.e) occupied[p] = true
+                                spansToApply.add(Triple(gS, gE, COLOR_PURPLE))
+                            }
+                        }
+                    }
+                    "private" -> {
+                        // look ahead to see if next meaningful word is var or val; if so, highlight following word name
+                        var j = iWord + 1
+                        var foundVarVal = false
+                        while (j < words.size) {
+                            val ww = words[j]
+                            if (commentMask.getOrNull(ww.s) == true) { j++; continue }
+                            if (ww.word == "var" || ww.word == "val") {
+                                foundVarVal = true
+                                break
+                            } else {
+                                break // other token -> stop
+                            }
+                        }
+                        if (foundVarVal) {
+                            val afterIdx = j + 1
+                            if (afterIdx < words.size) {
+                                val nameToken = words[afterIdx]
+                                if (!commentMask.getOrNull(nameToken.s)!!) {
+                                    var already = false
+                                    for (p in nameToken.s until nameToken.e) if (occupied[p]) { already = true; break }
+                                    if (!already) {
+                                        for (p in nameToken.s until nameToken.e) occupied[p] = true
+                                        spansToApply.add(Triple(startOffset + nameToken.s, startOffset + nameToken.e, COLOR_PURPLE))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    "override" -> {
+                        // look for fun then next word
+                        var j = iWord + 1
+                        var foundFun = false
+                        while (j < words.size) {
+                            val ww = words[j]
+                            if (commentMask.getOrNull(ww.s) == true) { j++; continue }
+                            if (ww.word == "fun") { foundFun = true; break } else { break }
+                        }
+                        if (foundFun) {
+                            val afterIdx = j + 1
+                            if (afterIdx < words.size) {
+                                val nameToken = words[afterIdx]
+                                if (!commentMask.getOrNull(nameToken.s)!!) {
+                                    var already = false
+                                    for (p in nameToken.s until nameToken.e) if (occupied[p]) { already = true; break }
+                                    if (!already) {
+                                        for (p in nameToken.s until nameToken.e) occupied[p] = true
+                                        spansToApply.add(Triple(startOffset + nameToken.s, startOffset + nameToken.e, COLOR_PURPLE))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                iWord++
+            }
+
+            // 4) Mapping & keywords — greedy matching via keysByLengthDesc for ANY token (including symbols/numbers)
+            // We'll iterate through positions local i, attempt to match a key (longest first). Skip occupied or commented.
+            if (keysByLengthDesc.isNotEmpty()) {
+                var i = 0
+                while (i < len) {
+                    if (commentMask[i] || occupied[i]) { i++; continue }
+                    var matched = false
+                    for (key in keysByLengthDesc) {
+                        val klen = key.length
+                        if (klen == 0 || i + klen > len) continue
+                        // compare to visibleLower substring without creating substrings: use regionMatches
+                        if (visibleLower.regionMatches(i, key, 0, klen)) {
+                            // ensure not overlapping occupied
+                            var anyOcc = false
+                            for (p in i until (i + klen)) { if (occupied[p]) { anyOcc = true; break } }
+                            if (anyOcc) {
+                                // skip this key, try others or advance
+                                continue
+                            }
+                            // apply mapped color
+                            val color = syntaxMapping[key] ?: continue
+                            val gS = startOffset + i
+                            val gE = startOffset + i + klen
+                            spansToApply.add(Triple(gS, gE, color))
+                            for (p in i until i + klen) occupied[p] = true
+                            matched = true
+                            i += klen
+                            break
+                        }
+                    }
+                    if (!matched) i++
+                }
+            }
+
+            // 5) Fallback: highlight kotlinKeywords (word tokens) if not already occupied
+            for (w in words) {
+                if (commentMask.getOrNull(w.s) == true) continue
+                if (occupied.sliceArray(w.s until w.e).any { it }) continue
+                if (kotlinKeywords.contains(w.word)) {
+                    val gS = startOffset + w.s
+                    val gE = startOffset + w.e
+                    for (p in w.s until w.e) occupied[p] = true
+                    // use existing blue from previous code
+                    val blue = Color.parseColor("#82B1FF")
+                    spansToApply.add(Triple(gS, gE, blue))
+                }
+            }
+
+            // Merge adjacent/overlapping spans of the same color to reduce number of spans applied
+            val merged = mergeSpans(spansToApply)
 
             withContext(Dispatchers.Main) {
                 try {
                     clearForegroundSpansInRange(startOffset, endOffset)
                     val editable = binding.editor.text
                     if (editable is Spannable) {
-                        for ((s, e, color) in spansToApply) {
-                            editable.setSpan(ForegroundColorSpan(color), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        for ((s, e, color) in merged) {
+                            try {
+                                editable.setSpan(ForegroundColorSpan(color), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                            } catch (_: Exception) {}
                         }
                         // formatting spans if enabled
                         if (formatOn) {
@@ -921,6 +1141,30 @@ class EditorActivity : AppCompatActivity() {
                 } catch (_: Exception) {}
             }
         }
+    }
+
+    // Merge spans by color: input list may be unsorted
+    private fun mergeSpans(input: List<Triple<Int, Int, Int>>): List<Triple<Int, Int, Int>> {
+        if (input.isEmpty()) return emptyList()
+        val byColor = input.groupBy { it.third }
+        val out = mutableListOf<Triple<Int, Int, Int>>()
+        for ((color, list) in byColor) {
+            val ranges = list.map { it.first to it.second }.sortedWith(compareBy({ it.first }, { it.second }))
+            var curS = ranges[0].first
+            var curE = ranges[0].second
+            for (i in 1 until ranges.size) {
+                val (s, e) = ranges[i]
+                if (s <= curE) {
+                    curE = max(curE, e)
+                } else {
+                    out.add(Triple(curS, curE, color))
+                    curS = s; curE = e
+                }
+            }
+            out.add(Triple(curS, curE, color))
+        }
+        // finally sort merged spans by start
+        return out.sortedBy { it.first }
     }
 
     private fun clearForegroundSpansInRange(rangeStart: Int, rangeEnd: Int) {
@@ -1138,17 +1382,17 @@ class EditorActivity : AppCompatActivity() {
         waitDlg.show()
 
         val dotsJob = lifecycleScope.launch {
-    var dots = 0
-    while (isActive) {
-        withContext(Dispatchers.Main) {
-            waitDlg.setMessage(
-                getString(R.string.dialog_encrypting_message) + ".".repeat(dots)
-            )
+            var dots = 0
+            while (isActive) {
+                withContext(Dispatchers.Main) {
+                    waitDlg.setMessage(
+                        getString(R.string.dialog_encrypting_message) + ".".repeat(dots)
+                    )
+                }
+                dots = (dots + 1) % 4
+                delay(400)
+            }
         }
-        dots = (dots + 1) % 4
-        delay(400)
-    }
-}
 
         lifecycleScope.launch(bgDispatcher) {
             try {
@@ -1172,35 +1416,35 @@ class EditorActivity : AppCompatActivity() {
     }
 
     private fun performDecrypt(password: CharArray) {
-    val encrypted = binding.editor.text?.toString() ?: ""
-    if (encrypted.isEmpty()) {
-        Toast.makeText(
-            this,
-            getString(R.string.toast_nothing_to_decrypt),
-            Toast.LENGTH_SHORT
-        ).show()
-        return
-    }
-
-    val waitDlg = AlertDialog.Builder(this)
-        .setTitle(getString(R.string.dialog_decrypting_title))
-        .setMessage(getString(R.string.dialog_decrypting_message))
-        .setCancelable(false)
-        .create()
-    waitDlg.show()
-
-    val dotsJob = lifecycleScope.launch {
-        var dots = 0
-        while (isActive) {
-            withContext(Dispatchers.Main) {
-                waitDlg.setMessage(
-                    getString(R.string.dialog_decrypting_message) + ".".repeat(dots)
-                )
-            }
-            dots = (dots + 1) % 4
-            delay(400)
+        val encrypted = binding.editor.text?.toString() ?: ""
+        if (encrypted.isEmpty()) {
+            Toast.makeText(
+                this,
+                getString(R.string.toast_nothing_to_decrypt),
+                Toast.LENGTH_SHORT
+            ).show()
+            return
         }
-    }
+
+        val waitDlg = AlertDialog.Builder(this)
+            .setTitle(getString(R.string.dialog_decrypting_title))
+            .setMessage(getString(R.string.dialog_decrypting_message))
+            .setCancelable(false)
+            .create()
+        waitDlg.show()
+
+        val dotsJob = lifecycleScope.launch {
+            var dots = 0
+            while (isActive) {
+                withContext(Dispatchers.Main) {
+                    waitDlg.setMessage(
+                        getString(R.string.dialog_decrypting_message) + ".".repeat(dots)
+                    )
+                }
+                dots = (dots + 1) % 4
+                delay(400)
+            }
+        }
 
         lifecycleScope.launch(bgDispatcher) {
             try {
@@ -1213,11 +1457,10 @@ class EditorActivity : AppCompatActivity() {
                     scheduleStatsUpdate()
                     pushHistorySnapshot(plain)
                     Toast.makeText(
-                     this@EditorActivity,
-                     getString(R.string.toast_decrypt_done),
-                     Toast.LENGTH_SHORT
-                      ).show()
-
+                        this@EditorActivity,
+                        getString(R.string.toast_decrypt_done),
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) { Toast.makeText(this@EditorActivity, "Decryption failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show() }
