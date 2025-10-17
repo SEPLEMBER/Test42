@@ -34,7 +34,7 @@
     <string name="settings_formatting_support">Поддержка форматирования</string>
     <string name="settings_line_numbers">Показывать номера строк</string>
     <string name="settings_retro_mode">Ретро-режим</string>
-    <string name="settings_syntax_highlight">Подсветка синтаксиса</string>
+    <string name="settings_syntax_highlight">Подсветка синтаксиса (нестабильно) </string>
 
     <string name="settings_format_on">Форматирование включено</string>
     <string name="settings_format_off">Форматирование отключено</string>
