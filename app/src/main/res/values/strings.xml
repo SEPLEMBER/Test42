@@ -34,7 +34,7 @@
     <string name="settings_formatting_support">Formatting support</string>
     <string name="settings_line_numbers">Show line numbers</string>
     <string name="settings_retro_mode">Retro mode</string>
-    <string name="settings_syntax_highlight">Syntax highlighting</string>
+    <string name="settings_syntax_highlight">Syntax highlighting (unstble test) </string>
 
     <string name="settings_format_on">Formatting enabled</string>
     <string name="settings_format_off">Formatting disabled</string>
