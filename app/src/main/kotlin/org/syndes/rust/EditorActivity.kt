@@ -619,7 +619,7 @@ class EditorActivity : AppCompatActivity() {
     }
 
     // ---------- STATS (debounced) ----------
-    private fun scheduleStatsUpdate(delayMs: Long = 1000L) {
+    private fun scheduleStatsUpdate(delayMs: Long = 900L) {
         statsJob?.cancel()
         statsJob = lifecycleScope.launch {
             delay(delayMs)
@@ -857,7 +857,7 @@ class EditorActivity : AppCompatActivity() {
     }
 
     // ---------- HIGHLIGHT (visible area only) ----------
-    private fun scheduleHighlight(delayMs: Long = 1000L) {
+    private fun scheduleHighlight(delayMs: Long = 700L) {
         uiUpdateJob?.cancel()
         uiUpdateJob = lifecycleScope.launch {
             delay(delayMs)
