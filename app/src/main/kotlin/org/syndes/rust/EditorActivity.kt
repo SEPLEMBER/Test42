@@ -1019,8 +1019,7 @@ class EditorActivity : AppCompatActivity() {
                         while (j < words.size) {
                             val ww = words[j]
                             if (commentMask.getOrNull(ww.s) == true) { j++; continue }
-                            if (ww.word == "var" || ww.word == "val") {
-if (ww.word == "var" || ww.word == "val" || ww.word == "fun") {
+                             if (ww.word == "var" || ww.word == "val" || ww.word == "fun") {
                                 foundVarVal = true
                                 break
                             } else {
