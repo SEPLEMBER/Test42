@@ -100,12 +100,46 @@
     <string name="dialog_decrypting_message">Please wait</string>
     <string name="toast_decrypt_done">Decryption done</string>
     <string name="toast_nothing_to_decrypt">Nothing to decrypt</string>
-
     <string name="toast_amber_on">Amber mode enabled</string>
     <string name="toast_amber_off">Amber mode disabled</string>
-
     <string name="toast_language_set">Language set: %1$s</string>
-
+    <string name="toast_syntax_mapping_loaded">Syntax mapping loaded</string>
+    <string name="toast_copied">Copied</string>
+    <string name="toast_nothing_to_copy">Nothing to copy</string>
+    <string name="toast_pasted">Pasted</string>
+    <string name="toast_clipboard_empty">Clipboard empty</string>
+    <string name="dialog_clear_document_title">Clear document</string>
+    <string name="dialog_clear_document_message">Are you sure you want to clear the entire document? This action can be undone (if Undo is enabled).</string>
+    <string name="clear_button">Clear</string>
+    <string name="cancel_button">Cancel</string>
+    <string name="toast_file_opened">File opened</string>
+    <string name="toast_error_opening_file">Error opening file: %1$s</string>
+    <string name="error_cannot_open_output_stream">Cannot open output stream</string>
+    <string name="toast_saved">Saved</string>
+    <string name="toast_error_saving_file">Error saving file: %1$s</string>
+    <string name="label_go_to_line">Go to line</string>
+    <string name="label_matches_count">%1$d matches</string>
+    <string name="toast_no_matches">No matches</string>
+    <string name="toast_query_empty">Query empty</string>
+    <string name="toast_undo_disabled">Undo disabled in settings</string>
+    <string name="toast_nothing_to_undo">Nothing to undo</string>
+    <string name="toast_nothing_to_redo">Nothing to redo</string>
+    <string name="hint_password">Password</string>
+    <string name="dialog_encrypt_title">Encrypt</string>
+    <string name="encrypt_button">Encrypt</string>
+    <string name="toast_password_required">Password required</string>
+    <string name="dialog_decrypt_title">Decrypt</string>
+    <string name="decrypt_button">Decrypt</string>
+    <string name="toast_nothing_to_encrypt">Nothing to encrypt</string>
+    <string name="toast_encryption_failed">Encryption failed: %1$s</string>
+    <string name="toast_decryption_failed">Decryption failed: %1$s</string>
+    <string name="dialog_settings_title">Settings</string>
+    <string name="dialog_settings_message">Settings available:\n• Prevent screenshots: %1$b\n• Undo enabled: %2$b\n• Dark theme: %3$b\n• Font size: %4$s\n• Formatting: %5$b\n• Line numbers (ignored): %6$b\n• Retro: %7$b\n• Syntax highlight: %8$b\n\nOpen SettingsActivity to change these.</string>
+    <string name="ok_button">OK</string>
+    <string name="toast_unable_open_file_picker">Unable to open file picker for syntax mapping</string>
+    <string name="toast_failed_read_mapping_file">Failed to read mapping file: %1$s</string>
+    <string name="toast_failed_read_mapping_asset">Failed to read mapping asset: %1$s</string>
+    
     <string name="section_developers_title">👨‍💻 Developers</string>
     <string name="section_developers_text">Syndes Project, September 2025. An open-source project created by volunteers and available to the community.</string>
 
