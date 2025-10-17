@@ -78,7 +78,7 @@ class EditorActivity : AppCompatActivity() {
 
     // new prefs
     private val PREF_FORMAT_ON = "format_on"
-    private val PREF_SHOW_LINE_NUMBERS = "show_line_numbers" // временно игнорируется
+    private val PREF_SHOW_LINE_NUMBERS = "show_line_numbers" // temporarily ignored
     private val PREF_RETRO_MODE = "retro_mode"
     private val PREF_SYNTAX_HIGHLIGHT = "syntax_highlight"
     private val PREF_SYNTAX_MAPPING_URI = "syntax_mapping_uri"
@@ -107,9 +107,9 @@ class EditorActivity : AppCompatActivity() {
     private var keysByLengthDesc: List<String> = emptyList()
 
     // Colors used by special rules
-    private val COLOR_PURPLE = Color.parseColor("#9C27B0")     // фиолетово-сиреневый
-    private val COLOR_TURQUOISE = Color.parseColor("#00BCD4")  // бирюзовый (содержимое скобок)
-    private val COLOR_COMMENT_GREY = Color.parseColor("#9E9E9E") // слегка серый (комментарии)
+    private val COLOR_PURPLE = Color.parseColor("#9C27B0")     // purple-lilac
+    private val COLOR_TURQUOISE = Color.parseColor("#00BCD4")  // turquoise (bracket content)
+    private val COLOR_COMMENT_GREY = Color.parseColor("#9E9E9E") // slight grey (comments)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // apply theme preference early
@@ -163,7 +163,7 @@ class EditorActivity : AppCompatActivity() {
             uri?.let {
                 lifecycleScope.launch {
                     parseAndStoreSyntaxMappingFromUri(it)
-                    Toast.makeText(this@EditorActivity, "Syntax mapping loaded", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@EditorActivity, getString(R.string.toast_syntax_mapping_loaded), Toast.LENGTH_SHORT).show()
                     // request a highlight update
                     scheduleHighlight()
                 }
@@ -313,9 +313,9 @@ class EditorActivity : AppCompatActivity() {
                 val toCopy = if (selStart >= 0 && selEnd > selStart) text.substring(selStart, selEnd) else text
                 if (toCopy.isNotEmpty()) {
                     copyToClipboard(toCopy)
-                    Toast.makeText(this, "Copied", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.toast_copied), Toast.LENGTH_SHORT).show()
                 } else {
-                    Toast.makeText(this, "Nothing to copy", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.toast_nothing_to_copy), Toast.LENGTH_SHORT).show()
                 }
                 true
             }
@@ -324,9 +324,9 @@ class EditorActivity : AppCompatActivity() {
                 if (!pasted.isNullOrEmpty()) {
                     val pos = binding.editor.selectionStart.coerceAtLeast(0)
                     binding.editor.text?.insert(pos, pasted)
-                    Toast.makeText(this, "Pasted", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.toast_pasted), Toast.LENGTH_SHORT).show()
                 } else {
-                    Toast.makeText(this, "Clipboard empty", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.toast_clipboard_empty), Toast.LENGTH_SHORT).show()
                 }
                 true
             }
@@ -369,9 +369,9 @@ class EditorActivity : AppCompatActivity() {
 
     private fun confirmAndClear() {
         val dlg = AlertDialog.Builder(this)
-            .setTitle("Clear document")
-            .setMessage("Are you sure you want to clear the entire document? This action can be undone (if Undo is enabled).")
-            .setPositiveButton("Clear") { _, _ ->
+            .setTitle(getString(R.string.dialog_clear_document_title))
+            .setMessage(getString(R.string.dialog_clear_document_message))
+            .setPositiveButton(getString(R.string.clear_button)) { _, _ ->
                 // snapshot current state before clearing
                 pushHistorySnapshot(binding.editor.text?.toString() ?: "")
                 ignoreTextWatcher = true
@@ -380,7 +380,7 @@ class EditorActivity : AppCompatActivity() {
                 ignoreTextWatcher = false
                 scheduleStatsUpdate()
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(getString(R.string.cancel_button), null)
             .create()
         dlg.show()
     }
@@ -424,10 +424,10 @@ class EditorActivity : AppCompatActivity() {
 
                 scheduleStatsUpdate()
                 scheduleHighlight()
-                Toast.makeText(this@EditorActivity, "File opened", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@EditorActivity, getString(R.string.toast_file_opened), Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
                 e.printStackTrace()
-                Toast.makeText(this@EditorActivity, "Error opening file: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@EditorActivity, getString(R.string.toast_error_opening_file, e.localizedMessage), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -441,12 +441,12 @@ class EditorActivity : AppCompatActivity() {
                             bw.write(text)
                             bw.flush()
                         }
-                    } ?: throw IllegalStateException("Cannot open output stream")
+                    } ?: throw IllegalStateException(getString(R.string.error_cannot_open_output_stream))
                 }
-                Toast.makeText(this@EditorActivity, "Saved", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@EditorActivity, getString(R.string.toast_saved), Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
                 e.printStackTrace()
-                Toast.makeText(this@EditorActivity, "Error saving file: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@EditorActivity, getString(R.string.toast_error_saving_file, e.localizedMessage), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -466,10 +466,10 @@ class EditorActivity : AppCompatActivity() {
         if (!lastQuery.isNullOrEmpty()) etFind.setText(lastQuery)
 
         val dialog = AlertDialog.Builder(this)
-       .setTitle(getString(R.string.dialog_find_replace_title))
-       .setView(view)
-       .setNegativeButton(getString(R.string.close_button), null)
-       .create()
+            .setTitle(getString(R.string.dialog_find_replace_title))
+            .setView(view)
+            .setNegativeButton(getString(R.string.close_button), null)
+            .create()
 
         fun selectMatchAt(index: Int) {
             if (index < 0 || index >= matches.size) return
@@ -493,7 +493,7 @@ class EditorActivity : AppCompatActivity() {
 
         fun computeMatchesAndUpdate(query: String) {
             if (tryGoToLine(query)) {
-                tvCount.text = "Go to line"
+                tvCount.text = getString(R.string.label_go_to_line)
                 return
             }
             lifecycleScope.launch(bgDispatcher) {
@@ -509,7 +509,7 @@ class EditorActivity : AppCompatActivity() {
                     currentMatchIdx = if (found.isNotEmpty()) 0 else -1
                 }
                 withContext(Dispatchers.Main) {
-                    tvCount.text = "${matches.size} matches"
+                    tvCount.text = getString(R.string.label_matches_count, matches.size)
                     if (currentMatchIdx >= 0 && matches.isNotEmpty()) {
                         selectMatchAt(currentMatchIdx)
                     }
@@ -518,12 +518,12 @@ class EditorActivity : AppCompatActivity() {
         }
 
         btnNext.setOnClickListener {
-            if (matches.isEmpty()) { Toast.makeText(this, "No matches", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
+            if (matches.isEmpty()) { Toast.makeText(this, getString(R.string.toast_no_matches), Toast.LENGTH_SHORT).show(); return@setOnClickListener }
             currentMatchIdx = (currentMatchIdx + 1) % matches.size
             selectMatchAt(currentMatchIdx)
         }
         btnPrev.setOnClickListener {
-            if (matches.isEmpty()) { Toast.makeText(this, "No matches", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
+            if (matches.isEmpty()) { Toast.makeText(this, getString(R.string.toast_no_matches), Toast.LENGTH_SHORT).show(); return@setOnClickListener }
             currentMatchIdx = if (currentMatchIdx - 1 < 0) matches.size - 1 else currentMatchIdx - 1
             selectMatchAt(currentMatchIdx)
         }
@@ -531,7 +531,7 @@ class EditorActivity : AppCompatActivity() {
         btnR1.setOnClickListener {
             val q = etFind.text.toString()
             val r = etReplace.text.toString()
-            if (q.isEmpty()) { Toast.makeText(this, "Query empty", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
+            if (q.isEmpty()) { Toast.makeText(this, getString(R.string.toast_query_empty), Toast.LENGTH_SHORT).show(); return@setOnClickListener }
             if (matches.isEmpty() || currentMatchIdx < 0) {
                 Toast.makeText(this, getString(R.string.no_current_match_to_replace), Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
@@ -547,7 +547,7 @@ class EditorActivity : AppCompatActivity() {
         btnRAll.setOnClickListener {
             val q = etFind.text.toString()
             val r = etReplace.text.toString()
-            if (q.isEmpty()) { Toast.makeText(this, "Query empty", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
+            if (q.isEmpty()) { Toast.makeText(this, getString(R.string.toast_query_empty), Toast.LENGTH_SHORT).show(); return@setOnClickListener }
             lifecycleScope.launch(bgDispatcher) {
                 val full = binding.editor.text?.toString() ?: ""
                 val escaped = Regex.escape(q)
@@ -560,7 +560,7 @@ class EditorActivity : AppCompatActivity() {
                     ignoreTextWatcher = false
                     matches = emptyList()
                     currentMatchIdx = -1
-                    tvCount.text = "0 matches"
+                    tvCount.text = getString(R.string.label_matches_count, 0)
                     scheduleStatsUpdate()
                     pushHistorySnapshot(replaced)
                     Toast.makeText(this@EditorActivity, getString(R.string.replaced_all), Toast.LENGTH_SHORT).show()
@@ -679,7 +679,7 @@ class EditorActivity : AppCompatActivity() {
         // amber takes precedence if enabled
         if (amber) {
             binding.editor.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
-            binding.editor.setTextColor(Color.parseColor("#FFBF00")) // янтарный
+            binding.editor.setTextColor(Color.parseColor("#FFBF00")) // amber
         } else if (retro) {
             binding.editor.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
             binding.editor.setTextColor(Color.parseColor("#ff00ff00"))
@@ -757,7 +757,7 @@ class EditorActivity : AppCompatActivity() {
             try {
                 loadSyntaxMappingLauncher.launch(arrayOf("text/*"))
             } catch (_: Exception) {
-                Toast.makeText(this, "Unable to open file picker for syntax mapping", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.toast_unable_open_file_picker), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -811,7 +811,7 @@ class EditorActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 // ignore parse errors but show toast
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(this@EditorActivity, "Failed to read mapping file: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@EditorActivity, getString(R.string.toast_failed_read_mapping_file, e.localizedMessage), Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -850,7 +850,7 @@ class EditorActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(this@EditorActivity, "Failed to read mapping asset: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@EditorActivity, getString(R.string.toast_failed_read_mapping_asset, e.localizedMessage), Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -1019,7 +1019,7 @@ class EditorActivity : AppCompatActivity() {
                         while (j < words.size) {
                             val ww = words[j]
                             if (commentMask.getOrNull(ww.s) == true) { j++; continue }
-                             if (ww.word == "var" || ww.word == "val" || ww.word == "fun") {
+                            if (ww.word == "var" || ww.word == "val" || ww.word == "fun") {
                                 foundVarVal = true
                                 break
                             } else {
@@ -1294,11 +1294,11 @@ class EditorActivity : AppCompatActivity() {
     fun performUndo() {
         val undoEnabled = getSharedPreferences(prefsName, Context.MODE_PRIVATE).getBoolean(PREF_UNDO_ENABLED, true)
         if (!undoEnabled) {
-            Toast.makeText(this, "Undo disabled in settings", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.toast_undo_disabled), Toast.LENGTH_SHORT).show()
             return
         }
         if (historyIndex <= 0) {
-            Toast.makeText(this, "Nothing to undo", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.toast_nothing_to_undo), Toast.LENGTH_SHORT).show()
             return
         }
         historyIndex--
@@ -1313,7 +1313,7 @@ class EditorActivity : AppCompatActivity() {
 
     fun performRedo() {
         if (historyIndex >= history.size - 1) {
-            Toast.makeText(this, "Nothing to redo", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.toast_nothing_to_redo), Toast.LENGTH_SHORT).show()
             return
         }
         historyIndex++
@@ -1329,19 +1329,19 @@ class EditorActivity : AppCompatActivity() {
     // ---------- ENCRYPT / DECRYPT ----------
     private fun promptEncryptCurrent() {
         val input = EditText(this)
-        input.hint = "Password"
+        input.hint = getString(R.string.hint_password)
         val dlg = AlertDialog.Builder(this)
-            .setTitle("Encrypt")
+            .setTitle(getString(R.string.dialog_encrypt_title))
             .setView(input)
-            .setPositiveButton("Encrypt", null)
-            .setNegativeButton("Cancel", null)
+            .setPositiveButton(getString(R.string.encrypt_button), null)
+            .setNegativeButton(getString(R.string.cancel_button), null)
             .create()
 
         dlg.setOnShowListener {
             val btn = dlg.getButton(AlertDialog.BUTTON_POSITIVE)
             btn.setOnClickListener {
                 val pw = input.text.toString()
-                if (pw.isEmpty()) { Toast.makeText(this, "Password required", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
+                if (pw.isEmpty()) { Toast.makeText(this, getString(R.string.toast_password_required), Toast.LENGTH_SHORT).show(); return@setOnClickListener }
                 dlg.dismiss()
                 performEncrypt(pw.toCharArray())
             }
@@ -1351,19 +1351,19 @@ class EditorActivity : AppCompatActivity() {
 
     private fun promptDecryptCurrent() {
         val input = EditText(this)
-        input.hint = "Password"
+        input.hint = getString(R.string.hint_password)
         val dlg = AlertDialog.Builder(this)
-            .setTitle("Decrypt")
+            .setTitle(getString(R.string.dialog_decrypt_title))
             .setView(input)
-            .setPositiveButton("Decrypt", null)
-            .setNegativeButton("Cancel", null)
+            .setPositiveButton(getString(R.string.decrypt_button), null)
+            .setNegativeButton(getString(R.string.cancel_button), null)
             .create()
 
         dlg.setOnShowListener {
             val btn = dlg.getButton(AlertDialog.BUTTON_POSITIVE)
             btn.setOnClickListener {
                 val pw = input.text.toString()
-                if (pw.isEmpty()) { Toast.makeText(this, "Password required", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
+                if (pw.isEmpty()) { Toast.makeText(this, getString(R.string.toast_password_required), Toast.LENGTH_SHORT).show(); return@setOnClickListener }
                 dlg.dismiss()
                 performDecrypt(pw.toCharArray())
             }
@@ -1373,7 +1373,7 @@ class EditorActivity : AppCompatActivity() {
 
     private fun performEncrypt(password: CharArray) {
         val plain = binding.editor.text?.toString() ?: ""
-        if (plain.isEmpty()) { Toast.makeText(this, "Nothing to encrypt", Toast.LENGTH_SHORT).show(); return }
+        if (plain.isEmpty()) { Toast.makeText(this, getString(R.string.toast_nothing_to_encrypt), Toast.LENGTH_SHORT).show(); return }
         val waitDlg = AlertDialog.Builder(this)
             .setTitle(getString(R.string.dialog_encrypting_title))
             .setMessage(getString(R.string.dialog_encrypting_message))
@@ -1404,10 +1404,10 @@ class EditorActivity : AppCompatActivity() {
                     ignoreTextWatcher = false
                     scheduleStatsUpdate()
                     pushHistorySnapshot(encrypted)
-                    Toast.makeText(this@EditorActivity, getString(R.string.toast_encrypt_done),  Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@EditorActivity, getString(R.string.toast_encrypt_done), Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) { Toast.makeText(this@EditorActivity, "Encryption failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show() }
+                withContext(Dispatchers.Main) { Toast.makeText(this@EditorActivity, getString(R.string.toast_encryption_failed, e.localizedMessage), Toast.LENGTH_LONG).show() }
             } finally {
                 dotsJob.cancel()
                 withContext(Dispatchers.Main) { waitDlg.dismiss() }
@@ -1463,7 +1463,7 @@ class EditorActivity : AppCompatActivity() {
                     ).show()
                 }
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) { Toast.makeText(this@EditorActivity, "Decryption failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show() }
+                withContext(Dispatchers.Main) { Toast.makeText(this@EditorActivity, getString(R.string.toast_decryption_failed, e.localizedMessage), Toast.LENGTH_LONG).show() }
             } finally {
                 dotsJob.cancel()
                 withContext(Dispatchers.Main) { waitDlg.dismiss() }
@@ -1484,9 +1484,9 @@ class EditorActivity : AppCompatActivity() {
         val syntax = sp.getBoolean(PREF_SYNTAX_HIGHLIGHT, false)
 
         val dlg = AlertDialog.Builder(this)
-            .setTitle("Settings")
-            .setMessage("Settings available:\n• Prevent screenshots: $prevent\n• Undo enabled: $undo\n• Dark theme: $dark\n• Font size: $font\n• Formatting: $format\n• Line numbers (ignored): $gutter\n• Retro: $retro\n• Syntax highlight: $syntax\n\nOpen SettingsActivity to change these.")
-            .setPositiveButton("OK", null)
+            .setTitle(getString(R.string.dialog_settings_title))
+            .setMessage(getString(R.string.dialog_settings_message, prevent, undo, dark, font, format, gutter, retro, syntax))
+            .setPositiveButton(getString(R.string.ok_button), null)
             .create()
         dlg.show()
     }
