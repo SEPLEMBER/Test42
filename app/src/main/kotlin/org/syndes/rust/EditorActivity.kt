@@ -773,14 +773,6 @@ class EditorActivity : AppCompatActivity() {
         }
     }
 
-    // ---------- NEW: grouping by first char ----------
-    // mapping token(lowercase) -> color
-    private val syntaxMapping = mutableMapOf<String, Int>()
-    // groups: firstChar(lowercase) -> list of (token, color), sorted by token length desc
-    private val syntaxGroups = mutableMapOf<Char, MutableList<Pair<String, Int>>>()
-    // (optional fallback list kept for compatibility)
-    private var keysByLengthDesc: List<String> = emptyList()
-
     // Parse mapping file (format lines: token=#RRGGBB) and store mapping in memory + persist URI
     private suspend fun parseAndStoreSyntaxMappingFromUri(uri: Uri) {
         withContext(Dispatchers.IO) {
@@ -788,7 +780,6 @@ class EditorActivity : AppCompatActivity() {
                 contentResolver.openInputStream(uri)?.use { inputStream ->
                     BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8)).use { br ->
                         val map = mutableMapOf<String, Int>()
-                        val groups = mutableMapOf<Char, MutableList<Pair<String, Int>>>()
                         br.forEachLine { raw ->
                             val line = raw.trim()
                             if (line.isEmpty()) return@forEachLine
@@ -796,34 +787,21 @@ class EditorActivity : AppCompatActivity() {
                             // allow token= #RRGGBB or token=#RRGGBB (with/without spaces)
                             val parts = line.split("=").map { it.trim() }
                             if (parts.size >= 2) {
-                                val tokenRaw = parts[0]
+                                val token = parts[0]
                                 val colorStr = parts[1]
                                 try {
-                                    val token = tokenRaw.lowercase()
                                     val color = Color.parseColor(colorStr)
-                                    if (token.isNotEmpty()) {
-                                        map[token] = color
-                                        val first = token.firstOrNull()
-                                        if (first != null) {
-                                            val list = groups.getOrPut(first) { mutableListOf() }
-                                            list.add(token to color)
-                                        }
-                                    }
+                                    if (token.isNotEmpty()) map[token.lowercase()] = color
                                 } catch (_: Exception) {
-                                    // ignore invalid color or other parse problems
+                                    // ignore invalid color
                                 }
                             }
-                        }
-                        // sort groups by token length desc for greedy matching
-                        for ((_, list) in groups) {
-                            list.sortByDescending { it.first.length }
                         }
                         // swap into main map on UI thread
                         withContext(Dispatchers.Main) {
                             syntaxMapping.clear()
                             syntaxMapping.putAll(map)
-                            syntaxGroups.clear()
-                            syntaxGroups.putAll(groups)
+                            // update keys sorted by length (desc) for greedy matching
                             keysByLengthDesc = syntaxMapping.keys.sortedByDescending { it.length }
                             // persist uri so we can reload next time
                             getSharedPreferences(prefsName, Context.MODE_PRIVATE).edit().putString(PREF_SYNTAX_MAPPING_URI, uri.toString()).apply()
@@ -846,40 +824,25 @@ class EditorActivity : AppCompatActivity() {
                 assets.open(filename).use { inputStream ->
                     BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8)).use { br ->
                         val map = mutableMapOf<String, Int>()
-                        val groups = mutableMapOf<Char, MutableList<Pair<String, Int>>>()
                         br.forEachLine { raw ->
                             val line = raw.trim()
                             if (line.isEmpty()) return@forEachLine
                             if (line.startsWith("#")) return@forEachLine // comment
                             val parts = line.split("=").map { it.trim() }
                             if (parts.size >= 2) {
-                                val tokenRaw = parts[0]
+                                val token = parts[0]
                                 val colorStr = parts[1]
                                 try {
-                                    val token = tokenRaw.lowercase()
                                     val color = Color.parseColor(colorStr)
-                                    if (token.isNotEmpty()) {
-                                        map[token] = color
-                                        val first = token.firstOrNull()
-                                        if (first != null) {
-                                            val list = groups.getOrPut(first) { mutableListOf() }
-                                            list.add(token to color)
-                                        }
-                                    }
+                                    if (token.isNotEmpty()) map[token.lowercase()] = color
                                 } catch (_: Exception) {
-                                    // ignore invalid color or other parse problems
+                                    // ignore invalid color
                                 }
                             }
-                        }
-                        // sort groups by token length desc for greedy matching
-                        for ((_, list) in groups) {
-                            list.sortByDescending { it.first.length }
                         }
                         withContext(Dispatchers.Main) {
                             syntaxMapping.clear()
                             syntaxMapping.putAll(map)
-                            syntaxGroups.clear()
-                            syntaxGroups.putAll(groups)
                             keysByLengthDesc = syntaxMapping.keys.sortedByDescending { it.length }
                             // do not persist assets as URI; but store language pref (already done via settings)
                         }
@@ -1014,10 +977,12 @@ class EditorActivity : AppCompatActivity() {
 
             // 3) Special contextual rules based on word tokens:
             //    - package: all following words in same line -> purple
-            //    - private var|val|fun <first-name> -> purple (first name after var/val/fun)
+            //    - private var|val <first-name> -> purple (first name after var/val)
             //    - override fun <first-name> -> purple
+            // We'll scan word tokens using regex-like approach (letters/digits/_)
             val wordRegex = Regex("[A-Za-z_][A-Za-z0-9_]*")
             val wordMatches = wordRegex.findAll(visibleText).toList() // includes positions
+            // create list of (startLocal, endLocal, wordLower)
             data class W(val s: Int, val e: Int, val word: String)
             val words = wordMatches.map { W(it.range.first, it.range.last + 1, it.value.lowercase()) }
 
@@ -1028,30 +993,37 @@ class EditorActivity : AppCompatActivity() {
                 if (commentMask.getOrNull(w.s) == true) { iWord++; continue }
                 when (w.word) {
                     "package" -> {
+                        // highlight all words after package in the same line
+                        // compute line end local
                         val lineEndLocal = visibleText.indexOf('\n', w.e).let { if (it == -1) len else it }
+                        // find all words that start >= w.e and < lineEndLocal
                         for (j in iWord + 1 until words.size) {
                             val ww = words[j]
                             if (ww.s >= lineEndLocal) break
                             if (commentMask.getOrNull(ww.s) == true) continue
+                            val gS = startOffset + ww.s
+                            val gE = startOffset + ww.e
+                            // mark occupied and add purple span
                             var already = false
                             for (p in ww.s until ww.e) if (occupied[p]) { already = true; break }
                             if (!already) {
                                 for (p in ww.s until ww.e) occupied[p] = true
-                                spansToApply.add(Triple(startOffset + ww.s, startOffset + ww.e, COLOR_PURPLE))
+                                spansToApply.add(Triple(gS, gE, COLOR_PURPLE))
                             }
                         }
                     }
                     "private" -> {
+                        // look ahead to see if next meaningful word is var or val; if so, highlight following word name
                         var j = iWord + 1
                         var foundVarVal = false
                         while (j < words.size) {
                             val ww = words[j]
                             if (commentMask.getOrNull(ww.s) == true) { j++; continue }
-                            if (ww.word == "var" || ww.word == "val" || ww.word == "fun") {
+                             if (ww.word == "var" || ww.word == "val" || ww.word == "fun") {
                                 foundVarVal = true
                                 break
                             } else {
-                                break
+                                break // other token -> stop
                             }
                         }
                         if (foundVarVal) {
@@ -1070,6 +1042,7 @@ class EditorActivity : AppCompatActivity() {
                         }
                     }
                     "override" -> {
+                        // look for fun then next word
                         var j = iWord + 1
                         var foundFun = false
                         while (j < words.size) {
@@ -1096,40 +1069,9 @@ class EditorActivity : AppCompatActivity() {
                 iWord++
             }
 
-            // 4) Mapping & keywords — use grouping by first char (syntaxGroups) for efficiency
-            if (syntaxGroups.isNotEmpty()) {
-                var i = 0
-                while (i < len) {
-                    if (commentMask[i] || occupied[i]) { i++; continue }
-                    val ch = visibleLower[i]
-                    val group = syntaxGroups[ch]
-                    if (group != null) {
-                        var matched = false
-                        // group already sorted by token length desc (greedy)
-                        for ((key, color) in group) {
-                            val klen = key.length
-                            if (klen == 0 || i + klen > len) continue
-                            if (visibleLower.regionMatches(i, key, 0, klen)) {
-                                // ensure not overlapping occupied
-                                var anyOcc = false
-                                for (p in i until (i + klen)) { if (occupied[p]) { anyOcc = true; break } }
-                                if (anyOcc) continue
-                                val gS = startOffset + i
-                                val gE = startOffset + i + klen
-                                spansToApply.add(Triple(gS, gE, color))
-                                for (p in i until i + klen) occupied[p] = true
-                                matched = true
-                                i += klen
-                                break
-                            }
-                        }
-                        if (!matched) i++
-                    } else {
-                        i++
-                    }
-                }
-            } else if (keysByLengthDesc.isNotEmpty()) {
-                // fallback to previous approach if groups not available
+            // 4) Mapping & keywords — greedy matching via keysByLengthDesc for ANY token (including symbols/numbers)
+            // We'll iterate through positions local i, attempt to match a key (longest first). Skip occupied or commented.
+            if (keysByLengthDesc.isNotEmpty()) {
                 var i = 0
                 while (i < len) {
                     if (commentMask[i] || occupied[i]) { i++; continue }
@@ -1137,10 +1079,16 @@ class EditorActivity : AppCompatActivity() {
                     for (key in keysByLengthDesc) {
                         val klen = key.length
                         if (klen == 0 || i + klen > len) continue
+                        // compare to visibleLower substring without creating substrings: use regionMatches
                         if (visibleLower.regionMatches(i, key, 0, klen)) {
+                            // ensure not overlapping occupied
                             var anyOcc = false
                             for (p in i until (i + klen)) { if (occupied[p]) { anyOcc = true; break } }
-                            if (anyOcc) { continue }
+                            if (anyOcc) {
+                                // skip this key, try others or advance
+                                continue
+                            }
+                            // apply mapped color
                             val color = syntaxMapping[key] ?: continue
                             val gS = startOffset + i
                             val gE = startOffset + i + klen
@@ -1163,6 +1111,7 @@ class EditorActivity : AppCompatActivity() {
                     val gS = startOffset + w.s
                     val gE = startOffset + w.e
                     for (p in w.s until w.e) occupied[p] = true
+                    // use existing blue from previous code
                     val blue = Color.parseColor("#82B1FF")
                     spansToApply.add(Triple(gS, gE, blue))
                 }
@@ -1332,7 +1281,7 @@ class EditorActivity : AppCompatActivity() {
         }
     }
 
-    private fun scheduleHistorySnapshot(delayMs: Long = 3000L) {
+    private fun scheduleHistorySnapshot(delayMs: Long = 5000L) {
         historyJob?.cancel()
         historyJob = lifecycleScope.launch {
             delay(delayMs)
