@@ -3,11 +3,14 @@ package org.syndes.rust
 import android.content.Context
 import android.os.Bundle
 import android.view.MenuItem
+import android.view.View
 import android.view.WindowManager
 import android.widget.CompoundButton
+import android.widget.LinearLayout
 import android.widget.RadioButton
 import android.widget.RadioGroup
 import android.widget.Switch
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
@@ -90,6 +93,15 @@ class SettingsActivity : AppCompatActivity() {
         val rbCSS = findViewById<RadioButton?>(R.id.rbLangCSS)
         val rbHTML = findViewById<RadioButton?>(R.id.rbLangHTML)
 
+        // OPTIONAL: views for hiding syntax/language UI (double-safety)
+        val llSyntax = findViewById<LinearLayout?>(R.id.llSyntaxContainer)
+        val tvLangLabel = findViewById<TextView?>(R.id.tvLanguageLabel)
+
+        // hide syntax and language UI visually (keeps prefs & logic intact)
+        llSyntax?.visibility = View.GONE
+        tvLangLabel?.visibility = View.GONE
+        rgLang?.visibility = View.GONE
+
         // initialize states (null-safe)
         swPrevent?.isChecked = sp.getBoolean(PREF_PREVENT_SCREENSHOT, false)
         swUndo?.isChecked = sp.getBoolean(PREF_UNDO_ENABLED, true)
@@ -161,10 +173,10 @@ class SettingsActivity : AppCompatActivity() {
         swAmber?.setOnCheckedChangeListener { _: CompoundButton, checked: Boolean ->
             sp.edit().putBoolean(PREF_AMBER_MODE, checked).apply()
             Toast.makeText(
-    this,
-    if (checked) getString(R.string.toast_amber_on) else getString(R.string.toast_amber_off),
-    Toast.LENGTH_SHORT
-).show()
+                this,
+                if (checked) getString(R.string.toast_amber_on) else getString(R.string.toast_amber_off),
+                Toast.LENGTH_SHORT
+            ).show()
         }
 
         // listener: font size radio group
@@ -201,10 +213,10 @@ class SettingsActivity : AppCompatActivity() {
             }
             sp.edit().putString(PREF_SYNTAX_LANGUAGE, langValue).apply()
             Toast.makeText(
-    this,
-    getString(R.string.toast_language_set, langValue),
-    Toast.LENGTH_SHORT
-).show()
+                this,
+                getString(R.string.toast_language_set, langValue),
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
 
