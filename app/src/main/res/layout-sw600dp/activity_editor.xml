@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/editor_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/editor_background">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- Toolbar -->
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:popupTheme="@style/ThemeOverlay.AppCompat.Light"
+            android:background="@android:color/transparent" />
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#262626" />
+
+        <!-- Stats row -->
+        <TextView
+            android:id="@+id/tvStats"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="8dp"
+            android:text="Words: 0 | Chars: 0"
+            android:textColor="#BDBDBD"
+            android:textSize="13sp" />
+
+        <!-- Editor container -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:padding="8dp">
+
+            <EditText
+                android:id="@+id/editor"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@android:color/transparent"
+                android:textColor="#E0E0E0"
+                android:textColorHint="#BDBDBD"
+                android:textSize="16sp"
+                android:inputType="textMultiLine|textNoSuggestions"
+                android:gravity="top|start"
+                android:scrollbars="vertical"
+                android:overScrollMode="ifContentScrolls"
+                android:padding="8dp"
+                android:lineSpacingExtra="2dp"
+                android:importantForAutofill="no"
+                android:hint="@string/editor_hint" />
+
+            <!-- Empty hint -->
+            <TextView
+                android:id="@+id/emptyHint"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/empty_hint"
+                android:textColor="#9E9E9E"
+                android:alpha="0.9"
+                android:layout_gravity="center"
+                android:visibility="gone"/>
+        </FrameLayout>
+    </LinearLayout>
+
+    <!-- Jump zones -->
+    <View
+        android:id="@+id/jumpTop"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_marginTop="?attr/actionBarSize"
+        android:layout_gravity="top|end"
+        android:background="@android:color/transparent"
+        android:contentDescription="@string/jump_top"
+        android:clickable="true"
+        android:focusable="true" />
+
+    <View
+        android:id="@+id/jumpBottom"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_gravity="bottom|end"
+        android:layout_marginBottom="8dp"
+        android:background="@android:color/transparent"
+        android:contentDescription="@string/jump_bottom"
+        android:clickable="true"
+        android:focusable="true" />
+
+</FrameLayout>
