@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Rust</string>
+
+    <string name="menu_file">Plik</string>
+    <string name="menu_open">Otwórz</string>
+    <string name="menu_save">Zapisz</string>
+    <string name="menu_save_as">Zapisz jako</string>
+    <string name="menu_edit">Edycja</string>
+    <string name="menu_copy">Kopiuj</string>
+    <string name="menu_paste">Wklej</string>
+    <string name="menu_find">Znajdź</string>
+    <string name="menu_undo">Cofnij</string>
+    <string name="menu_redo">Przywróć</string>
+    <string name="menu_encrypt">Szyfruj</string>
+    <string name="menu_decrypt">Deszyfruj</string>
+    <string name="menu_settings">Ustawienia</string>
+
+    <string name="settings_title">Ustawienia</string>
+    <string name="settings_prevent_screenshots">Zabroń zrzutów ekranu</string>
+    <string name="settings_undo_enabled">Włącz cofanie/przywracanie</string>
+    <string name="settings_dark_theme">Ciemny motyw</string>
+    <string name="settings_screenshots_protected">Zrzuty ekranu zostały zablokowane</string>
+    <string name="settings_screenshots_allowed">Zrzuty ekranu dozwolone</string>
+    <string name="settings_undo_on">Cofanie włączone</string>
+    <string name="settings_undo_off">Cofanie wyłączone</string>
+    <string name="settings_theme_changed">Motyw zmieniony</string>
+    <string name="settings_font_size">Rozmiar czcionki</string>
+    <string name="settings_font_small">Mały</string>
+    <string name="settings_font_normal">Normalny</string>
+    <string name="settings_font_medium">Średni</string>
+    <string name="settings_font_large">Duży</string>
+    <string name="settings_font_changed">Zapisano rozmiar czcionki: %1$s</string>
+    <string name="settings_formatting_support">Wsparcie formatowania</string>
+    <string name="settings_line_numbers">Pokaż numery linii</string>
+    <string name="settings_retro_mode">Tryb retro</string>
+    <string name="settings_syntax_highlight">Podświetlanie składni (niestabilny test)</string>
+
+    <string name="settings_format_on">Formatowanie włączone</string>
+    <string name="settings_format_off">Formatowanie wyłączone</string>
+
+    <string name="settings_line_numbers_on">Numery linii włączone</string>
+    <string name="settings_line_numbers_off">Numery linii wyłączone</string>
+
+    <string name="settings_retro_on">Tryb retro włączony</string>
+    <string name="settings_retro_off">Tryb retro wyłączony</string>
+
+    <string name="settings_syntax_on">Podświetlanie składni włączone</string>
+    <string name="settings_syntax_off">Podświetlanie składni wyłączone</string>
+    <string name="settings_amber_mode">Tryb Amber</string>
+    <string name="settings_language">Język</string>
+
+    <string name="settings_amber_on">Motyw Amber włączony</string>
+    <string name="settings_amber_off">Motyw Amber wyłączony</string>
+
+    <string name="settings_language_changed">Zmieniono język programowania %s</string>
+
+    <string name="menu_select_all">Wszystko</string>
+
+    <string name="find_hint">Znajdź (użyj :123 aby przejść do linii 123)</string>
+    <string name="replace_hint">Zamień na</string>
+    <string name="matches_count">Dopasowania: 0</string>
+
+    <string name="menu_quick">Szybko</string>
+    <string name="menu_clear">Wyczyść</string>
+    <string name="menu_about">O aplikacji</string>
+    <string name="textRust">Rust</string>
+    <string name="stats_default">Słowa: 0 | Znaków: 0</string>
+    <string name="editor_hint">Zacznij pisać...</string>
+    <string name="empty_hint">...</string>
+    <string name="jump_top">Przejdź na początek</string>
+    <string name="jump_bottom">Przejdź na koniec</string>
+    <string name="close_button">Zamknij</string>
+    <string name="no_current_match_to_replace">Brak bieżącego dopasowania do zamiany</string>
+    <string name="replaced_all">Zamieniono wszystkie</string>
+
+    <string name="section_tutorial_title">📖 Instrukcje i wskazówki</string>
+
+    <string name="section_tutorial_item1">1. Obsługiwane jest szybkie przewijanie: przesuń palcem z prawej do lewej oraz w górę lub w dół. Szybka nawigacja na początek lub koniec pliku jest dostępna przez dotknięcie prawego górnego lub prawego dolnego rogu.</string>
+
+    <string name="section_tutorial_item2">2. Obsługiwane jest szybkie kopiowanie: przytrzymaj długo w dowolnym miejscu i użyj przycisku „Wszystko”. Szybkie usuwanie tekstu jest również możliwe za pomocą „Wszystko” + „USUŃ” na klawiaturze.</string>
+
+    <string name="section_tutorial_item3">3. Edycja bardzo dużych plików może obciążać zasoby w zależności od urządzenia. W większości scenariuszy (do 100 000 znaków lub więcej) edytor działa prawidłowo.</string>
+
+    <string name="section_tutorial_item4">4. Po zmianie ustawień podświetlania składni zalecane jest ponowne uruchomienie aplikacji.</string>
+
+    <string name="section_tutorial_item5">5. Ochrona danych jest zaimplementowana przy użyciu AES-GCM z HMAC-SHA256 i PBKDF2 (75 000 iteracji). Użyj losowego i wystarczająco złożonego hasła, aby zapewnić silną ochronę. Uwaga: słabe hasło obniża skuteczność mechanizmów kryptograficznych; dla wrażliwych danych użyj menedżera haseł.</string>
+
+    <string name="section_tutorial_item6">6. Ten edytor jest częścią ekosystemu Syndes. Użytkowanie do zadań służbowych jest dozwolone i nie jest ograniczone licencją. Projekt jest darmowy i rozprowadzany jako otwarte oprogramowanie.</string>
+
+    <string name="section_tutorial_item7">7. Zrzeczenie się odpowiedzialności: twórcy nie ponoszą odpowiedzialności za konsekwencje korzystania z edytora. Dokładamy starań, by oprogramowanie było niezawodne, lecz nie gwarantujemy całkowitej stabilności. Regularne kopie zapasowe zmniejszają ryzyko utraty danych.</string>
+
+    <!-- Dialog / toast strings -->
+    <string name="dialog_find_replace_title">Znajdź / Zamień</string>
+    <string name="dialog_encrypting_title">Szyfrowanie</string>
+    <string name="dialog_encrypting_message">Proszę czekać</string>
+    <string name="toast_encrypt_done">Szyfrowanie zakończone</string>
+
+    <string name="dialog_decrypting_title">Deszyfrowanie</string>
+    <string name="dialog_decrypting_message">Proszę czekać</string>
+    <string name="toast_decrypt_done">Deszyfrowanie zakończone</string>
+    <string name="toast_nothing_to_decrypt">Brak danych do deszyfrowania</string>
+    <string name="toast_amber_on">Tryb Amber włączony</string>
+    <string name="toast_amber_off">Tryb Amber wyłączony</string>
+    <string name="toast_language_set">Ustawiono język: %1$s</string>
+    <string name="toast_syntax_mapping_loaded">Mapowanie składni załadowane</string>
+    <string name="toast_copied">Skopiowano</string>
+    <string name="toast_nothing_to_copy">Brak niczego do skopiowania</string>
+    <string name="toast_pasted">Wklejono</string>
+    <string name="toast_clipboard_empty">Schowek pusty</string>
+    <string name="dialog_clear_document_title">Wyczyść dokument</string>
+    <string name="dialog_clear_document_message">Czy na pewno chcesz wyczyścić cały dokument? Tę akcję można cofnąć (jeśli cofanie jest włączone).</string>
+    <string name="clear_button">Wyczyść</string>
+    <string name="cancel_button">Anuluj</string>
+    <string name="toast_file_opened">Plik otwarty</string>
+    <string name="toast_error_opening_file">Błąd otwierania pliku: %1$s</string>
+    <string name="error_cannot_open_output_stream">Nie można otworzyć strumienia wyjściowego</string>
+    <string name="toast_saved">Zapisano</string>
+    <string name="toast_error_saving_file">Błąd zapisu pliku: %1$s</string>
+    <string name="label_go_to_line">Przejdź do linii</string>
+    <string name="label_matches_count">%1$d dopasowań</string>
+    <string name="toast_no_matches">Brak dopasowań</string>
+    <string name="toast_query_empty">Puste zapytanie</string>
+    <string name="toast_undo_disabled">Cofanie wyłączone w ustawieniach</string>
+    <string name="toast_nothing_to_undo">Brak niczego do cofnięcia</string>
+    <string name="toast_nothing_to_redo">Brak niczego do przywrócenia</string>
+    <string name="hint_password">Hasło</string>
+    <string name="dialog_encrypt_title">Szyfruj</string>
+    <string name="encrypt_button">Szyfruj</string>
+    <string name="toast_password_required">Wymagane hasło</string>
+    <string name="dialog_decrypt_title">Deszyfruj</string>
+    <string name="decrypt_button">Deszyfruj</string>
+    <string name="toast_nothing_to_encrypt">Brak niczego do zaszyfrowania</string>
+    <string name="toast_encryption_failed">Szyfrowanie nie powiodło się: %1$s</string>
+    <string name="toast_decryption_failed">Deszyfrowanie nie powiodło się: %1$s</string>
+    <string name="dialog_settings_title">Ustawienia</string>
+    <string name="dialog_settings_message">Dostępne ustawienia:\n• Zabroń zrzutów ekranu: %1$b\n• Cofanie włączone: %2$b\n• Ciemny motyw: %3$b\n• Rozmiar czcionki: %4$s\n• Formatowanie: %5$b\n• Numery linii (ignorowane): %6$b\n• Retro: %7$b\n• Podświetlanie składni: %8$b\n\nOtwórz SettingsActivity, aby zmienić te opcje.</string>
+    <string name="ok_button">OK</string>
+    <string name="toast_unable_open_file_picker">Nie można otworzyć selektora plików dla mapowania składni</string>
+    <string name="toast_failed_read_mapping_file">Nie udało się odczytać pliku mapowania: %1$s</string>
+    <string name="toast_failed_read_mapping_asset">Nie udało się odczytać zasobu mapowania: %1$s</string>
+    
+    <string name="section_developers_title">👨‍💻 Deweloperzy</string>
+    <string name="section_developers_text">Projekt Syndes, wrzesień 2025. Projekt open-source stworzony przez wolontariuszy i dostępny dla społeczności.</string>
+
+    <string name="section_license_title">📜 Licencja</string>
+    <string name="section_license_text">Ta aplikacja niekomercyjna jest dystrybuowana na podstawie licencji Apache License 2.0.&#10;Użytkowanie, modyfikacja i forking są dozwolone. Prosimy zachować przypisanie do oryginalnego projektu: "Based on the Rust editor by Syndes Project" przynajmniej w sekcji "O aplikacji".&#10;Zobacz pełny tekst licencji w pliku LICENSE.</string>
+</resources>
